@@ -1,4 +1,28 @@
 
+Starting with the complete "output" folders generating by Irys analysis
+
+Run _analysis-of-duf-overlapping-sv.sh_ to analyze ALL samples in a given location for SVs that intersect the coordinates of DUF1220 containing genes
+
+Overview: For each sample, the program identifies the relevant smap and bed files and feeds them to _combine-smap-bed-files-single-sample.py_, which combines the information found in the smap and the bed files and does some calculations (e.g. it calculates SV size from information in the smap file) to create a bed file output that contains useful information only found in the smap file. This allows the output of subsequent intersections to retain the information of interest. The bash program then performs an intersection between the bed file of SV coordinates and the list of DUF1220 containing gene coordinates and generates an output bed file for each sample individually, and also a bed file that has the intersect results of all samples combined, "combined-intersect-results.bed". 
+
+Inputs required:
+1. The data folder that contains all of the samples you want to analyze (make sure the "/" on the end of the folder name is NOT included)
+2. The file that contains the DUF1220 gene coordinates
+3. The folder where you want the results to go (make sure the "/" on the end of the folder name is NOT included)
+
+Example usage:
+
+```
+bash data/1000GenomesIrys/full-output-folders supporting-reference-data/duf1220-containing-gene-cords-combined-annotations.bed results/intersections-with-gene-coords/2016-06-21 ```
+```
+Starting with the file that has the interesect results for all samples in one file, run _perform-groupby-functions-on-combined-intersect-results.sh_ to perform various bedtools groupby functions to analyze the data
+
+Example usage:
+
+```
+bash scripts/perform-groupby-functions-on-combined-intersect-results.sh results/intersections-with-gene-coords/2016-06-21/combined-intersect-results.bed results/intersections-with-gene-coords/2016-06-21
+```
+
 
 ### Run _runSV.py_ on each sample
 
@@ -22,7 +46,7 @@ just need to get IrysView working!
 ### Generate custom track files based on the SV results
 #### For a single file
 
-Run the scrip _process-sv-beds-for-custom-track-single-sample.sh_ providing the following arguments:  
+Run the script _process-sv-beds-for-custom-track-single-sample.sh_ providing the following arguments:  
 1. the SV bed file  
 2. the sample ID  
 3. the results folder
