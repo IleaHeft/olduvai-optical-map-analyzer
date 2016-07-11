@@ -13,7 +13,7 @@ Inputs required:
 Example usage:
 
 ```
-bash data/1000GenomesIrys/full-output-folders supporting-reference-data/duf1220-containing-gene-cords-combined-annotations.bed results/intersections-with-gene-coords/2016-06-21 ```
+bash scripts/analysis-of-duf-overlapping-sv.sh data/1000GenomesIrys/full-output-folders supporting-reference-data/duf1220-containing-gene-cords-combined-annotations.bed results/intersections-with-gene-coords/2016-06-21 ```
 ```
 Starting with the file that has the interesect results for all samples in one file, run _perform-groupby-functions-on-combined-intersect-results.sh_ to perform various bedtools groupby functions to analyze the data
 
@@ -23,6 +23,11 @@ Example usage:
 bash scripts/perform-groupby-functions-on-combined-intersect-results.sh results/intersections-with-gene-coords/2016-06-21/combined-intersect-results.bed results/intersections-with-gene-coords/2016-06-21
 ```
 
+To peform the groupby functions necessary to make a plot that accounts for samples that have both insertions and deletions you run the following command - at the moment, tesla's bedtools functionality seems to be down, but will want to add this line of code to the "perform-groupby" script.  
+
+```
+sort combined-intersect-results.bed -k 35,35 -k 31,31 -k 4,4 | bedtools groupby -i stdin -g 35,31 -c 4 -o distinct | sort -k 1,1 -k 3,3 | bedtools groupby -g 1,3 -c 2 -o count > num-samples-with-sv-each-gen-accounting-for-insdel.txt
+```
 
 ### Run _runSV.py_ on each sample
 
