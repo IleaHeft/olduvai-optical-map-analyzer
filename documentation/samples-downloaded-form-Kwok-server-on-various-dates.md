@@ -1,0 +1,42 @@
+First set downloaded:
+*GM11994/
+*GM12342/
+*GM18553/
+*GM18622/
+*GM18623/
+*GM19914/
+*GM19920/
+*GM19921/
+*GM21095/
+*GM21125/
+*GM21137/
+*HG00472/
+*HG00512/
+*HG00514/
+*HG00731/
+*HG00732/
+*HG00733/
+*HG00866/
+*HG00867/
+*HG01784/
+*HG02107/
+*HG02283/
+*HG02332/
+
+Downloaded on 2016-07-08:
+*HG00101
+*HG00260
+
+Downloaded on 2016-07-22: 
+*GM19443
+*GM21137 -- NOTE: This file was also in the original set of files, I am going to use the more recent one
+*HG00261
+*HG00271
+
+Downloaded on 2016-08-08:
+*GM19025/
+*HG00329/
+*HG00351/
+*HG01134/
+*HG01139/
+*HG03682/
