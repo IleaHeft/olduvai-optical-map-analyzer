@@ -14,4 +14,4 @@ with ```gzip -d YOURFILENAME``` and ```tar -xf YOURFILENAME```
   * The file, generated from the script above, that gives the combined intersect results for all files
   * The results folder
   Example usage:
-  ```
+  ```bash scripts/perform-groupby-functions-on-combined-intersect-results.sh results/intersections-with-gene-coords/1000Genomes/2016-08-22/combined-intersect-results.bed results/intersections-with-gene-coords/1000Genomes/2016-08-22```
