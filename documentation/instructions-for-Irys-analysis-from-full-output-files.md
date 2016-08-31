@@ -15,3 +15,7 @@ with ```gzip -d YOURFILENAME``` and ```tar -xf YOURFILENAME```
   * The results folder
   Example usage:
   ```bash scripts/perform-groupby-functions-on-combined-intersect-results.sh results/intersections-with-gene-coords/1000Genomes/2016-08-22/combined-intersect-results.bed results/intersections-with-gene-coords/1000Genomes/2016-08-22```
+  New usage because I incorporated a second set of operations that only reports the intersects that are "fully contained":
+```bash scripts/perform-groupby-functions-on-combined-intersect-results.sh results/intersections-with-gene-coords/1000Genomes/2016-08-22/combined-intersect-results.bed results/intersections-with-gene-coords/1000Genomes/2016-08-22/combined-intersect-results-fully-contained.bed results/intersections-with-gene-coords/1000Genomes/2016-08-22/```
+6. Run The sripts from steps 4 and 5 above using the coordinates for all RefSeq genes
+  ```bash scripts/analysis-of-duf-overlapping-sv.sh data/1000GenomesIrys/full-output-folders ~/LabProjects/NewAssembly/data/gff/sorted_gffGenes.bed results/intersections-with-gene-coords/1000Genomes/2016-08-23-intersects-with-full-refseq```
