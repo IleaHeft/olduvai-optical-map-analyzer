@@ -12,29 +12,33 @@ shift_nick = int(sys.argv[2])
 # either "HLS" or "CON1"
 region_to_measure = sys.argv[3]
 
+# File created in irys-analyzer.sh that gives reference nick positions of interest
+duf_nicks=sys.argv[4]
+
+# output folder
+output_dir = sys.argv[5]
+
 # Provide paths to each of these files
 xmap=directory + "/alignmolvref_contig1.xmap"
 r_cmap=directory + "/alignmolvref_contig1_r.cmap" 
 q_cmap=directory + "/alignmolvref_contig1_q.cmap"
 
 
-# Give known reference position of nicks of interest
-duf_nicks="duf-nick-sites.bed"
 
 
 # Set up output file
 if region_to_measure == "HLS":
     out_each_sample = open(sample + "-con2-con3-dist-plus" + str(shift_nick) + ".tab", mode = 'w')
 
-    ref_dist_file = open("ref-dist-hls.tab", mode = 'a')
+    ref_dist_file = open(output_dir + "/ref-dist-hls.tab", mode = 'a')
 
 else:
-    out_each_sample = open(sample + "-con1-region-dist-plus" + str(shift_nick) + ".tab", mode = 'w')
+    out_each_sample = open(output_dir + "/" + sample + "-con1-region-dist-plus" + str(shift_nick) + ".tab", mode = 'w')
 
-    ref_dist_file = open("ref-dist-con1-region.tab", mode = 'a')
+    ref_dist_file = open(output_dir + "/ref-dist-con1-region.tab", mode = 'a')
 
 # Set up an output file for status updates/flags
-status = open("status.txt", mode = 'a')
+status = open(output_dir + "/status.txt", mode = 'a')
 #flagged_mol_file = open("nick-dist-flagged-mols.txt", mode = 'a')
 
 #out_one_file = open("con2-con3-lengths-all-samples.tab", mode = 'w')
@@ -622,7 +626,7 @@ for gene, nicks in gene_nicks.items():
         to_print_one_file = [sample,gene,query_id,confidence,diff_bw_nick_nums.get(query_id),align_qual_flags,str(num_left_nicks),str(num_right_nicks),str(dist),nicks_used]
         print "\t".join(to_print_one_file)
     
-        print >> out_each_sample, "\t".join(to_print_one_file)
+        #print >> out_each_sample, "\t".join(to_print_one_file)
 
             
         #print >> flagged_mol_file, flagged_mols.get(query_id)
