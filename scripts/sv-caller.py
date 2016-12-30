@@ -8,12 +8,13 @@ ref_distances=sys.argv[1]
 peak_calls=sys.argv[2]
 region = sys.argv[3]
 link_dist = sys.argv[4]
+output_dir = sys.argv[5]
 
 # set up output file
-out = open("sv-calls-" + region + "-" + link_dist + ".txt", mode = 'w')
+out = open(output_dir + "/sv-calls-" + region + "-" + link_dist + ".txt", mode = 'w')
 
 # set up output file for unused molecules that don't pass the current filter of needing at least two molecules in a bin
-unused_mols = open("unused-mols-sv-caller.txt",mode = 'w')
+unused_mols = open(output_dir + "/unused-mols-sv-caller.txt",mode = 'w')
 
 list_of_samples=[]
 list_of_genes=[]

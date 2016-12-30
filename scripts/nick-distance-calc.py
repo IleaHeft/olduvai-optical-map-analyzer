@@ -5,7 +5,7 @@ import sys
 from collections import defaultdict
 
 directory=sys.argv[1]
-sample = directory.split("/")[1]
+sample = directory.split("/")[9]
 
 shift_nick = int(sys.argv[2])
 
@@ -28,7 +28,7 @@ q_cmap=directory + "/alignmolvref_contig1_q.cmap"
 
 # Set up output file
 if region_to_measure == "HLS":
-    out_each_sample = open(sample + "-con2-con3-dist-plus" + str(shift_nick) + ".tab", mode = 'w')
+   # out_each_sample = open(sample + "-con2-con3-dist-plus" + str(shift_nick) + ".tab", mode = 'w')
 
     ref_dist_file = open(output_dir + "/ref-dist-hls.tab", mode = 'a')
 

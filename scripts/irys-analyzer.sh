@@ -12,7 +12,6 @@ source scripts/config.sh
 
 
 
-#duf_nicks=duf-nick-sites.bed
 
 rm $output_dir/status.txt
 rm $output_dir/ref-distances.tab
@@ -58,7 +57,7 @@ bash $script_dir/peak-caller.sh CON1 $con1_output $link_dist
 #peak_calls_con1=CON1-peak-calls-$link_dist.txt
 
 
-python $script_dir/sv-caller.py $ref_dist_hls $peak_calls_hls HLS 1000
+python $script_dir/sv-caller.py $ref_dist_hls $peak_calls_hls HLS 1000 $output_dir
 
-python $script_dir/sv-caller.py $ref_dist_con1 $peak_calls_con1 CON1 1000
+python $script_dir/sv-caller.py $ref_dist_con1 $peak_calls_con1 CON1 1000 $output_dir
 

@@ -3,6 +3,8 @@
 #gene=$1
 #sample=$2
 
+source scripts/config.sh
+
 # region being analyzed
 region=$1
 
@@ -13,19 +15,22 @@ dist_per_mol=$2
 link_distance=$3
 
 # this is the output location of the binned/merged data
-output_file=$region-peak-calls-$link_distance.txt
+output_file=$output_dir/$region-peak-calls-$link_distance.txt
 #output_all_molecules=merged-dist-$link_distance-all-mols.txt
+
+sample_list=$output_dir/samples.txt
+gene_list=$output_dir/genes.txt
 
 # remove any existing version of these files so that you generate a new one and don't just add lines to an old one
 rm $output_file
-rm samples.txt
-rm genes.txt
+rm $sample_list
+rm $gene_list
 
 # generate file with sample names
-cut -f 1 $dist_per_mol | sort | uniq > samples.txt
+cut -f 1 $dist_per_mol | sort | uniq > $sample_list
 
 # generate file with gene names
-cut -f 2 $dist_per_mol | sort | uniq > genes.txt
+cut -f 2 $dist_per_mol | sort | uniq > $gene_list
 
 
 # This step merges molecules at similiar positions into "bins" and prints useful information about the molecules in each bin
@@ -77,12 +82,12 @@ cut -f 2 $dist_per_mol | sort | uniq > genes.txt
 # The final file has columns as specified immediately above, except the first three columns have been removed
 
 
-for i in $(less samples.txt);
+for i in $(less $sample_list);
     do
         sample=$i
        # echo $sample
 
-        for i in $(less genes.txt);
+        for i in $(less $gene_list);
             do
                 gene=$i
                # echo $gene
@@ -105,7 +110,7 @@ for i in $(less samples.txt);
 
 
 # Make a file of unused molecules
-filt_out=unused-mols-bin-step.txt
+filt_out=$output_dir/unused-mols-bin-step.txt
 rm $filt_out
 
 grep -P "\-[GU]*P+"\|"\t[GU]*P+" $dist_per_mol > $filt_out
