@@ -38,9 +38,9 @@ for sample in $(ls $sample_dir);
         grep -v "#" $contig1_rcmap | cut -f 5,6 | sed 's/\.[0-9]//g' | awk 'BEGIN{OFS="\t"} {print "chr"wq$1,$2,$2+1}' | sort -k 1,1 -k 2,2n | grep -v "chr0" |\
         bedtools intersect -wa -wb -a stdin -b ~/LabProjects/Irys/annotation-clade-based-numbering-full-domains-2016-11-29.bed > $duf_nicks
         
-        python nick-distance-calc-v4-con1-region.py $align_mol_dir $shift_nicks HLS >> $hls_output
+        python nick-distance-calc.py $align_mol_dir $shift_nicks HLS >> $hls_output
 
-        python nick-distance-calc-v4-con1-region.py $align_mol_dir $shift_nicks CON1 >> $con1_output
+        python nick-distance-calc.py $align_mol_dir $shift_nicks CON1 >> $con1_output
     done
 
 
