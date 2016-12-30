@@ -2,4 +2,16 @@
 
 irys-duf1220 is a set of tools for utilizing data produced by the Irys system to analyze structural variation in DUF1220 containing genes
 
+# Getting Started
+
+All of the individual scripts have been packaged into a single script, _irys-analyzer.sh_ with an accompanying _config.sh_ script to set various parameters and file paths.  The script will automatically analyze both HLS region and CON1 region variation.
+
+1) Ensure parameters in the config.sh file are set as desired  
+>Note that the **link_dist** parameter controls the size of the "bin" in the peak-caller.sh script, and changing this parameter could change your results.  
+
+2) Run the script:
+```
+bash irys-analyzer.sh
+```
+
 
