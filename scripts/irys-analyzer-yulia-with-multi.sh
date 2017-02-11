@@ -55,3 +55,27 @@ python $script_dir/sv-caller-yulia.py $ref_dist_hls $peak_calls_hls HLS $link_di
 
 python $script_dir/sv-caller-yulia.py $ref_dist_con1 $peak_calls_con1 CON1 $link_dist $output_dir
 
+
+source scripts/config-questionable-mols.sh
+
+duf_annotation=/vol5/home/eskildseni/LabProjects/Irys/annotation-clade-based-numbering-full-domains-2016-11-29.bed 
+shift_nicks=0
+mols_to_strip_hls=$output_dir/"mols-to-strip-hls.txt"
+mols_to_strip_con1=$output_dir/"mols-to-strip-con1.txt"
+
+
+for sample in $(ls $sample_dir | less | cut -f 1 -d "-" | sort | uniq );
+    do
+        echo $sample
+        align_mol_dir=$sample_dir
+    
+        grep -v "#" $contig1_rcmap | cut -f 5,6 | sed 's/\.[0-9]//g' | awk 'BEGIN{OFS="\t"} {print "chr"wq$1,$2,$2+1}' | sort -k 1,1 -k 2,2n | grep -v "chr0" |\
+        bedtools intersect -wa -wb -a stdin -b $duf_annotation > $duf_nicks
+        
+        python $script_dir/nick-distance-calc-multi2.py $align_mol_dir $shift_nicks HLS $duf_nicks $output_dir $sample >> $mols_to_strip_hls
+
+        python $script_dir/nick-distance-calc-multi2.py $align_mol_dir $shift_nicks CON1 $duf_nicks $output_dir $sample >> $molst_to_strip_con1
+    done
+
+
+

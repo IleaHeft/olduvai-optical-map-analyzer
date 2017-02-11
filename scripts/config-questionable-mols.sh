@@ -2,12 +2,12 @@
 
 
 #today=$(date +"%Y-%m-%d")
-today=2017-02-10
+today=2017-01-09
 # folder containing the scripts
 script_dir=~/LabProjects/irys-duf1220/scripts
 
 # the folder that holds all of the samples
-sample_dir=/vol7/home/eskildseni/LabProjects/irys-duf1220/data/yulia-alignments
+sample_dir=/vol7/home/eskildseni/LabProjects/irys-duf1220/data/multimatch5_108
 
 # The number of base pairs within which to string multiple molecules together in the peak caller step
 link_dist=2000
@@ -17,17 +17,17 @@ shift_nicks=0
 
 
 # the path to the desired output folder
-output_dir=/vol7/home/eskildseni/LabProjects/irys-duf1220/results/$today
+output_dir=/vol7/home/eskildseni/LabProjects/irys-duf1220/results/mols-to-remove
 mkdir $output_dir
 
 # the names of the output files that contain each relevant molecule and the distance between the relevant nicks on each molecule
-hls_output=$output_dir/con2-con3-dist-all-samples-plus-$shift_nicks.tab
-con1_output=$output_dir/con1-region-dist-all-samples.tab
+#hls_output=$output_dir/con2-con3-dist-all-samples-plus-$shift_nicks.tab
+#con1_output=$output_dir/con1-region-dist-all-samples.tab
 
 
 
 # the name of the file that will be created (and overwritten) for each sample that uses bedtools intersect to create a BED file of nick sites within DUF1220 domains
-duf_nicks=$output_dir/duf-nick-sites.bed
+duf_nicks=~/LabProjects/irys-duf1220/results/2017-01-09/duf-nick-sites.bed
 
 
 ref_dist_hls=$output_dir/ref-dist-hls.tab
