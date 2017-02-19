@@ -15,7 +15,8 @@ dist_per_mol=$2
 link_distance=$3
 
 # this is the output location of the binned/merged data
-output_file=$output_dir/$region-peak-calls-$link_distance.txt
+#output_file=$output_dir/$region-peak-calls-$link_distance.txt
+output_file=$region-peak-calls-$link_distance-adj-nicks.txt
 #output_all_molecules=merged-dist-$link_distance-all-mols.txt
 
 sample_list=$output_dir/samples.txt

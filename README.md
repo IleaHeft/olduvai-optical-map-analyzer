@@ -13,5 +13,11 @@ All of the individual scripts have been packaged into a single script, _irys-ana
 ```
 bash irys-analyzer.sh
 ```
+# File name formatting  
+If the file names use underscore separators, convert them to dashes with _renamefiles.sh_.  First move the script into the folder with the files that need the name change,
+then cd into that directory and run as shown below.  Then move the script back to the scripts directory.
 
+```
+bash renamefiles.sh
+```
 
