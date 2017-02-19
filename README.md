@@ -14,4 +14,10 @@ All of the individual scripts have been packaged into a single script, _irys-ana
 bash irys-analyzer.sh
 ```
 
+# File name formatting  
+If the file names use underscore separators, convert them to dashes with _renamefiles.sh_.  First move the script into the folder with the files that need the name change,then cd into that directory and run as shown below.  Then move the script back to the scripts directory. Note: if you later intend to open the xmap with the changed file name, you'll need to revert the file names of the r.cmap and q.cmap files to match their original formatting - if you do not, then IrysView will throw an error.
+  
+ ```
+ bash renamefiles.sh
+ ```
 
