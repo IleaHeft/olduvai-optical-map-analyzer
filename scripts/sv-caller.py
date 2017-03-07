@@ -13,6 +13,10 @@ output_dir = sys.argv[5]
 # set up output file
 out = open(output_dir + "/sv-calls-" + region + "-" + link_dist + ".txt", mode = 'w')
 
+# print column names
+colnames = ["#gene","sample","sv.call","diff.from.ref","num.mols.in.cluster","min.dist.bw.nicks","max.dist.bw.nicks","range.nick.dist.in.cluster","type.of.nick","median.conf.of.cluster"]
+print >> out, "\t".join(colnames) 
+
 # set up output file for unused molecules that don't pass the current filter of needing at least two molecules in a bin
 unused_mols = open(output_dir + "/unused-mols-sv-caller.txt",mode = 'w')
 
@@ -74,7 +78,7 @@ for line in open(peak_calls):
 
     ref_dist = gene_ref_dist.get(sample_gene)
 
-    diff = ref_dist - median_dist
+    diff = median_dist - ref_dist
     
     sample_gene = sample + "_" + gene
     
@@ -116,17 +120,17 @@ for sample_gene, diffs_counts in sample_gene_diffs.items():
             diff_status = "ref"
         elif diff > 0: 
             
-            diff_status = "del"
+            diff_status = "ins"
         elif diff < 0:
 
-            diff_status = "ins"
+            diff_status = "del"
         else:
             continue
 
         sample = sample_gene.split("_")[0]
         gene = sample_gene.split("_")[1]
 
-        to_print = [gene,sample,diff_status,str(abs(diff)),str(count),min_dist,max_dist,dist_range,gene_nick_type.get(gene),median_conf]
+        to_print = [gene,sample,diff_status,str(diff),str(count),min_dist,max_dist,dist_range,gene_nick_type.get(gene),median_conf]
         print >> out, "\t".join(to_print)
 
 for sample in set(list_of_samples):
