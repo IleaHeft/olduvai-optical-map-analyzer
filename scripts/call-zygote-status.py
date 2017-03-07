@@ -2,72 +2,48 @@
 
 import sys
 import pdb
+from collections import Counter
+from collections import defaultdict
 
+# provide file of SV calls
 sv_calls = sys.argv[1]
 
+# set up counter and dictionary
+gene_sample_counter = Counter()
+gene_sample_calls=defaultdict(list)
+
+# print colnames
+colnames = ["sample","gene","zygosity","num.calls","size.calls"]
+print "\t".join(colnames)
 
 for line in open(sv_calls):
     fields = line.strip().split("\t")
-    sample = fields[0]
-    gene = fields[1]
-    count = fields[2]
-    types = fields[3]
-    sizes = fields[4]
-
-    types_list = types.split(",")
+    gene = fields[0]
+    sample = fields[1]
+    type_call = fields[2]
+    size = fields[3]
+    num_mols = fields[4]
     
-    if "nd" in types:
+    if "nd" in type_call:
 
-        to_print = [sample, gene, "nd", "na", "na", "na"]
+        to_print = [sample, gene, "nd","nd","nd"]
         print "\t".join(to_print)        
-    
-    else:
-        if "ins" not in types and "del" not in types and "nd" not in types:
-            genotype = "homozygous-reference"
-
-        elif count == "1" and "ref" not in types:
-            genotype = "homozygous-" + types
-        elif count == "2":
-            if "ref" in types:
-      
-                for item in types_list:
-                    if item == "ref":
-                        type1 = "ref"
-                    else:
-                        type2 = item
-            elif "ins" in types and "del" not in types:
-                type1 = "ins"
-                type2 = "ins"
-
-            elif "del" in types and "ins" not in types:
-                type1 = "del"
-                type2 = "del"
-
-            else:
-                type1 = "ins"
-                type2 = "del"
-
-            genotype = "heterozygous-"+ type1 + "," + type2 
-        elif count == "3":
-            
-            ref_count = 0
-            
-            for item in types_list:
-                if item == "ref":
-                    ref_count += 1
-                else:
-                    other_type = item
-            if ref_count == 2:
-
-                genotype = "heterozygous-ref," + other_type 
-            else:
-                genotype = "heterozygous-" + types
         
-        else: 
-            genotype = "more than two"
+    # only looks at SV calls supported by only on molecule
+    elif num_mols != "1":
+        gene_sample = gene + "_" + sample
+        gene_sample_counter[gene_sample] += 1
+        gene_sample_calls[gene_sample].append(size)
 
+    else:
+        continue
+for gene_sample, size_calls in gene_sample_calls.items():
+    if len(size_calls) == 1:
+        zygosity = "homozygous" + "\t" + str(len(size_calls)) + "\t" + ", ".join(size_calls)
+    else:
+        zygosity = "heterozygous" + "\t" + str(len(size_calls)) + "\t" + ", ".join(size_calls)
 
-
-        to_print = [sample, gene, genotype, count, types, sizes]
-        print "\t".join(to_print)        
-
+    gene = gene_sample.split("_")[0]
+    sample = gene_sample.split("_")[1]
+    to_print = [sample,gene,zygosity] 
+    print "\t".join(to_print)
