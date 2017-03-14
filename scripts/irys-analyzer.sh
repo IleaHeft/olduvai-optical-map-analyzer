@@ -3,7 +3,7 @@
 #BSUB -o logs/irys_analyze_%J.out
 #BSUB -e logs/irys_analyze_%J.err
 
-source scripts/config-all-files-one-folder.sh
+source scripts/config.sh
 
 
 rm $output_dir/status.txt
