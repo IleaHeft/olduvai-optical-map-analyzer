@@ -1,9 +1,7 @@
 #! /usr/bin/env bash
 
-#gene=$1
-#sample=$2
-
-source scripts/config.sh
+# run config script
+source scripts/config-all-files-one-folder.sh
 
 # region being analyzed
 region=$1
@@ -15,6 +13,7 @@ dist_per_mol=$2
 link_distance=$3
 
 # this is the output location of the binned/merged data
+output_dir=$4
 output_file=$output_dir/$region-peak-calls-$link_distance.txt
 #output_all_molecules=merged-dist-$link_distance-all-mols.txt
 
