@@ -43,7 +43,6 @@ if region_to_measure == "HLS":
     ref_dist_file = open(output_dir + "/ref-dist-hls.tab", mode = 'a')
 
 else:
-    out_each_sample = open(output_dir + "/" + sample + "-con1-region-dist-plus" + str(shift_nick) + ".tab", mode = 'w')
 
     ref_dist_file = open(output_dir + "/ref-dist-con1-region.tab", mode = 'a')
 
