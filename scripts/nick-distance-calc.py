@@ -5,7 +5,7 @@ import sys
 from collections import defaultdict
 
 directory=sys.argv[1]
-sample = directory.split("/")[9]
+sample = sys.argv[6]
 
 shift_nick = int(sys.argv[2])
 
@@ -18,11 +18,21 @@ duf_nicks=sys.argv[4]
 # output folder
 output_dir = sys.argv[5]
 
-# Provide paths to each of these files
-xmap=directory + "/alignmolvref_contig1.xmap"
-r_cmap=directory + "/alignmolvref_contig1_r.cmap" 
-q_cmap=directory + "/alignmolvref_contig1_q.cmap"
+# generic file extension
+file_exten_generic = sys.argv[7]
 
+
+# Using generic file extension, generate paths to each of these files
+
+#xmap=directory + "/" + sample + "-" + file_exten_generic + ".xmap"
+xmap=directory + "/" + sample + "-filt.xmap"
+
+if "-" in file_exten_generic:
+    r_cmap=directory + "/" + sample + "-" + file_exten_generic + "-r.cmap" 
+    q_cmap=directory + "/" + sample + "-" + file_exten_generic + "-q.cmap"
+else:
+    r_cmap=directory + "/" + sample + "_" + file_exten_generic + "_r.cmap" 
+    q_cmap=directory + "/" + sample + "_" + file_exten_generic + "_q.cmap"
 
 
 

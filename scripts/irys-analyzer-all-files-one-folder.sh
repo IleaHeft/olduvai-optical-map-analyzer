@@ -31,6 +31,14 @@ for sample in $(ls $sample_dir | less | cut -f 1 -d "-" | sort | uniq );
         grep -v "#" $contig1_rcmap | cut -f 5,6 | sed 's/\.[0-9]//g' | awk 'BEGIN{OFS="\t"} {print "chr"wq$1,$2,$2+1}' | sort -k 1,1 -k 2,2n | grep -v "chr0" |\
         bedtools intersect -wa -wb -a stdin -b ~/LabProjects/Irys/annotation-clade-based-numbering-full-domains-2016-11-29.bed > $duf_nicks
         
+        
+        # Generate filterted xmap file that removes molecules with secondary mappings of similiar confidence to max confidence and reports only highest confidence alignment for other molecules
+        echo "generating a xmap file with multi-match molecules removed for" $sample
+        xmap=$sample_dir/$sample-$file_exten_xmap
+        echo $xmap
+        python $script_dir/generate-filtered-xmap.py $sample_dir $sample $xmap $conf_spread
+        
+        
         echo "calculating the distance between CON2 and CON3 nicks for" $sample
         python $script_dir/nick-distance-calc.py $align_mol_dir $shift_nicks HLS $duf_nicks $output_dir $sample $file_exten_generic >> $hls_output
         

@@ -4,10 +4,10 @@ import sys
 import pdb
 from collections import defaultdict
 
-
-xmap = sys.argv[1]
-conf_spread = int(sys.argv[2])
-sample = xmap.split("_")[0]
+sample_dir = sys.argv[1]
+sample = sys.argv[2]
+xmap = sys.argv[3]
+conf_spread = int(sys.argv[4])
 
 
 mol_conf = defaultdict(list)
@@ -15,8 +15,8 @@ to_filter_out = []
 to_keep = defaultdict(float)
 
 # Set up output files
-filtered_out = open("mols-filtered-out-multimatch.txt",mode = 'w')
-filtered_xmap = open("multi-removed.xmap",mode = 'w')
+filtered_out = open(sample_dir + "/" + sample + "-mols-with-ambiguous-alignment.txt",mode = 'w')
+filtered_xmap = open(sample_dir + "/" + sample + "-filt.xmap",mode = 'w')
 
 
 for line in open(xmap):
