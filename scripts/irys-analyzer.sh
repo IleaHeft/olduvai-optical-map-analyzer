@@ -75,6 +75,13 @@ echo "calling zygosity for the CON1 region for" $sample
 python $script_dir/call-zygote-status.py $output_dir/sv-calls-CON1-$link_dist.txt $link_dist $output_dir $min_mols_in_cluster
 
 
+# Calculate the number of structural alleles for each gene in the population analyzed
+echo "calculating number of size allels per gene for HLS region for" $sample
+bash $script_dir/allele-caller.sh $output_dir/sv-calls-HLS-$link_dist.txt $min_dist $ref_dist_hls > $output_dir/allele-counts-by-gene.txt
+
+
+echo "calculating number of size allels per gene for CON1 region for" $sample
+bash $script_dir/allele-caller.sh $output_dir/sv-calls-CON1-$link_dist.txt $min_dist $ref_dist_con1 > $output_dir/allele-counts-by-gene.txt
 
 
 # generate files where I have filtered out molecules where the nicks of interest are not adjacent to one another (e.g. there is a nick in the molecule between the aligned CON2 and CON3 nicks)
@@ -113,3 +120,11 @@ python $script_dir/call-zygote-status.py $output_dir_adjonly/sv-calls-HLS-$link_
 
 echo "calling zygosity for the CON1 region for" $sample
 python $script_dir/call-zygote-status.py $output_dir_adjonly/sv-calls-CON1-$link_dist.txt $link_dist $output_dir_adjonly $min_mols_in_cluster
+
+# Calculate the number of structural alleles for each gene in the population analyzed
+echo "calculating number of size allels per gene for HLS region for" $sample
+bash $script_dir/allele-caller.sh $output_dir_adjonly/sv-calls-HLS-$link_dist.txt $min_dist $ref_dist_hls > $output_dir_adjonly/allele-counts-by-gene.txt
+
+
+echo "calculating number of size allels per gene for CON1 region for" $sample
+bash $script_dir/allele-caller.sh $output_dir_adjonly/sv-calls-CON1-$link_dist.txt $min_dist $ref_dist_con1 > $output_dir_adjonly/allele-counts-by-gene.txt
