@@ -3,6 +3,13 @@
 irys-duf1220 is a set of tools for utilizing data produced by the Irys system to analyze structural variation in DUF1220 containing genes
 
 # Getting Started
+You will want to run types of analysis.  
+
+You will want to analyze the results of **molecule to reference** alignments, with multimatch on.  
+
+You will also want to analyze the **molecule to contig - contig to reference** alignments, in order to recover information for certain genes (e.g. NBPF19) for which very little information is recovered with the molecule to reference approach.  
+
+### Analyze the molecule to reference data
 
 All of the individual scripts have been packaged into a single script, _irys-analyzer.sh_ with an accompanying _config.sh_ script to set various parameters and file paths.  The script will automatically analyze both HLS region and CON1 region variation.
 
