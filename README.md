@@ -10,11 +10,12 @@ You will want to analyze the results of **molecule to reference** alignments, wi
 You will also want to analyze the **molecule to contig - contig to reference** alignments, in order to recover information for certain genes (e.g. NBPF19) for which very little information is recovered with the molecule to reference approach.  
 
 # Analyze the data
-All of the necessary code has been packaged into one script, _irys-analyzer.sh_ with an accompanying _config.sh_ script to set various parameters and file paths.  The script will automatically analyze both HLS region and CON1 region variation. Depending on the **alignment_type** you set in the _config.sh_ script, the _irys-analyzer.sh_ script will run the appropriate analysis.
+All of the necessary code has been packaged into one script, _irys-analyzer.sh_ with an accompanying _config.sh_ script to set various parameters and file paths.  The script will automatically analyze both HLS region and CON1 region variation. Depending on the **alignment_type** you set in the _config.sh_ script, the _irys-analyzer.sh_ script will run the appropriate analysis.  
 
 
 For a "complete" analysis of a set of samples, you will want to run the _irys-analyzer.sh_ three separate times, each time specifiying a different alignment type in the _config.sh_ script.  
-When you swith between running the MolRef and the MolContig or ContigRef data, make sure you also update the data folder (the MolRef data is likely in one folder and the MolContig and ContigRef data are in a separate folder).  
+
+When you swith between running the MolRef and the MolContig or ContigRef data, make sure you also update the data folder (the MolRef data is likely in one folder and the MolContig and ContigRef data are in a separate folder).    
 
 1) Ensure parameters in the config.sh file are set as desired
 - alignment type (one of: MolRef, MolContig, or ContigRef)
