@@ -26,7 +26,7 @@ for sample in $(ls $sample_dir | less | sed 's/\///g');
         
         echo "generating duf nick data for: " $sample
         
-        duf_nicks=$output_dir/duf-nicks-$sample.txt
+        duf_nicks=$duf_nick_dir/duf-nicks-$sample.txt
         grep -v "#" $sample_dir/$sample/local_contigs_to_ref_r.cmap | cut -f 5,6 | sed 's/\.[0-9]//g' | awk 'BEGIN{OFS="\t"} {print "chr"wq$1,$2,$2+1}' | sort -k 1,1 -k 2,2n | grep -v "chr0" | bedtools intersect -wa -wb -a stdin -b ~/LabProjects/Irys/annotation-clade-based-numbering-full-domains-2016-11-29.bed > $duf_nicks
 
         echo "running python script for: " $sample

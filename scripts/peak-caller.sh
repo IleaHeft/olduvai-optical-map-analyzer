@@ -28,8 +28,6 @@ rm $gene_list
 # generate file with sample names
 cut -f 1 $dist_per_mol | sort | uniq > $sample_list
 
-# generate file with gene names
-cut -f 2 $dist_per_mol | sort | uniq > $gene_list
 
 
 # This step merges molecules at similiar positions into "bins" and prints useful information about the molecules in each bin
@@ -85,6 +83,9 @@ for i in $(less $sample_list);
     do
         sample=$i
        # echo $sample
+        
+        # generate file with gene names, for this sample
+        grep $sample $dist_per_mol | cut -f 2 | sort | uniq > $gene_list
 
         for i in $(less $gene_list);
             do

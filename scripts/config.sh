@@ -23,9 +23,11 @@ link_dist=2000
 min_mols_in_cluster=2
 
 # specify the alignment type (MolRef, MolContig, ContigRef)
-alignment_type=MolContig
+alignment_type=ContigRef
 results_folder=$alignment_type/$num_samples"samples-link"$link_dist"-minmols"$min_mols_in_cluster"-filtmulti"$conf_spread"-"$date
 
+# DUF annotation file
+duf_annotation=~/LabProjects/Irys/annotation-clade-based-numbering-full-domains-2016-11-29.bed
 
 # folder containing the scripts
 script_dir=~/LabProjects/irys-duf1220/scripts
@@ -62,8 +64,14 @@ con1_output=$output_dir/con1-region-dist-all-samples.txt
 hls_output_adj_only=$output_dir_adjonly/con2-con3-dist-all-samples-plus-$shift_nicks.txt
 con1_output_adj_only=$output_dir_adjonly/con1-region-dist-all-samples.txt
 
-# the name of the file that will be created (and overwritten) for each sample that uses bedtools intersect to create a BED file of nick sites within DUF1220 domains
-duf_nicks=$output_dir/duf-nick-sites.bed
+# the name of the directory and the file that will be created (and overwritten) for each sample that uses bedtools intersect to create a BED file of nick sites within DUF1220 domains
+duf_nick_dir=$output_dir/duf-nick-data
+
+if [ ! -d $duf_nick_dir ]; then
+    mkdir -p $duf_nick_dir
+fi
+
+duf_nicks=$duf_nick_dir/duf-nick-sites.bed
 
 
 ref_dist_hls=$output_dir/ref-dist-hls.tab

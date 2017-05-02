@@ -14,7 +14,7 @@ ref_dist_list=$3
 
 
 # make a list of genes to loop over
-grep -v "#" $input_file | cut -f 1 | sort | uniq > genes.txt
+grep -v "#" $input_file | cut -f 1 | sort | uniq > $gene_list
 
 
 
