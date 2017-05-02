@@ -61,8 +61,17 @@ else
     echo "calculating contig to ref and mol to contig distances for the CON1 region"
     bash scripts/run-contig-to-ref-mols-to-contigs.sh CON1
     
-    hls_output=$output_dir/$num_samples-mols-to-contigs-HLS-region.txt
-    con1_output=$output_dir/$num_samples-mols-to-contigs-CON1-region.txt
+    if [ $alignment_type == "MolContig" ]; then
+        
+        echo "using distance files for mols to contig" 
+        hls_output=$output_dir/$num_samples-mols-to-contigs-HLS-region.txt
+        con1_output=$output_dir/$num_samples-mols-to-contigs-CON1-region.txt
+    else
+        echo "using distance files for contigs to ref" 
+        hls_output=$output_dir/$num_samples-contigs-to-ref-HLS-region.txt
+        con1_output=$output_dir/$num_samples-contigs-to-ref-CON1-region.txt
+    fi
+
 fi
 
 
