@@ -8,8 +8,6 @@ source scripts/config.sh
 
 rm $output_dir/status.txt
 rm $output_dir/ref-distances.tab
-rm $hls_output
-rm $con1_output
 
 touch $output_dir/status.txt
 touch $output_dir/ref-distances.tab
@@ -24,8 +22,8 @@ bash scripts/run-contig-to-ref-mols-to-contigs.sh HLS
 echo "calculating contig to ref and mol to contig distances for the CON1 region"
 bash scripts/run-contig-to-ref-mols-to-contigs.sh CON1
 
-hls_output=$output_dir/$num_samples-mols-to-contigs-HLS.txt
-con1_output=$output_dir/$num_samples-mols-to-contigs-CON1.txt
+hls_output=$output_dir/$num_samples-mols-to-contigs-HLS-region.txt
+con1_output=$output_dir/$num_samples-mols-to-contigs-CON1-region.txt
 
 # run the peak caller
 

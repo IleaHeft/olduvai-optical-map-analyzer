@@ -18,24 +18,24 @@ touch $con1_output
 
 
 
-for sample in $(ls $sample_dir | less | cut -f 1 -d "-" | sort | uniq );
+for sample in $(ls $sample_dir | less | cut -f 1 -d "_" | sort | uniq );
     do
         echo $sample
         align_mol_dir=$sample_dir
         
-        contig1_rcmap=$align_mol_dir/$sample-$file_exten_rcmap
-        echo $contig1_rcmap
+        rcmap=$align_mol_dir/$sample"_"$file_exten_rcmap
+        echo "reference cmap file being used is:" $rcmap
         
         echo "generating a bed file of nick sites within DUF1220 domains (start of short exon to end of long exon) for" $sample
 
-        grep -v "#" $contig1_rcmap | cut -f 5,6 | sed 's/\.[0-9]//g' | awk 'BEGIN{OFS="\t"} {print "chr"wq$1,$2,$2+1}' | sort -k 1,1 -k 2,2n | grep -v "chr0" |\
+        grep -v "#" $rcmap | cut -f 5,6 | sed 's/\.[0-9]//g' | awk 'BEGIN{OFS="\t"} {print "chr"wq$1,$2,$2+1}' | sort -k 1,1 -k 2,2n | grep -v "chr0" |\
         bedtools intersect -wa -wb -a stdin -b ~/LabProjects/Irys/annotation-clade-based-numbering-full-domains-2016-11-29.bed > $duf_nicks
         
         
         # Generate filterted xmap file that removes molecules with secondary mappings of similiar confidence to max confidence and reports only highest confidence alignment for other molecules
         echo "generating a xmap file with multi-match molecules removed for" $sample
-        xmap=$sample_dir/$sample-$file_exten_xmap
-        echo $xmap
+        xmap=$sample_dir/$sample"_"$file_exten_xmap
+        echo "xmap file being used is:" $xmap
         python $script_dir/generate-filtered-xmap.py $sample_dir $sample $xmap $conf_spread
         
         

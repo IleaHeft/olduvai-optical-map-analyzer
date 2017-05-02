@@ -1,7 +1,7 @@
 #! /usr/bin/env bash
 
 # run config script
-source scripts/config-all-files-one-folder.sh
+source scripts/config.sh
 
 # region being analyzed
 region=$1
