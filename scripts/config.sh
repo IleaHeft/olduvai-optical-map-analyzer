@@ -1,22 +1,15 @@
 #! /usr/bin/env bash
 
+# this automatically generates todays date
 date=$(date +"%Y%m%d")
-#today=$(date +"%Y-%m-%d")
-#today=2017-03-02
-results_folder=trios-T8A5-link2000-min2mols-filtmulti-$date
 
-# the folder that holds all of the samples
-sample_dir=/vol7/home/eskildseni/LabProjects/irys-duf1220/data/trios-T8A5-multimatch
+# the data folder (that can contain different sub-folders of different sample groups)
+data_dir=/vol7/home/eskildseni/LabProjects/irys-duf1220/data
+# the specific folder that holds all of the samples you want to analyze
+sample_dir=$data_dir/1704_trios_mols_to_contigs_to_ref/mols_to_contigs_to_ref_trios
 
-# folder containing the scripts
-script_dir=~/LabProjects/irys-duf1220/scripts
-
-
-# the file name format for the reference cmap files: everything that follows the sample name
-file_exten_generic=duf1220-mols-v-chr1
-file_exten_rcmap=duf1220-mols-v-chr1-r.cmap
-file_exten_qcmap=duf1220-mols-v-chr1-q.cmap
-file_exten_xmap=duf1220-mols-v-chr1.xmap
+# number of samples
+num_samples=3trios
 
 # The minimum difference that you want between the maximum confidence score for a molecule and the next highest confidence score - molecules with confidence scores closer than this threshold will be filtered out
 conf_spread=1
@@ -29,6 +22,21 @@ link_dist=2000
 ## then a setting of 1 is fine.  Could also set it higher if you wanted greater levels of support
 min_mols_in_cluster=2
 
+# specify the alignment type (MolRef, MolContig, ContigRef)
+alignment_type=MolContig
+results_folder=$alignment_type/$num_samples"samples-link"$link_dist"-minmols"$min_mols_in_cluster"-filtmulti"$conf_spread"-"$date
+
+
+# folder containing the scripts
+script_dir=~/LabProjects/irys-duf1220/scripts
+
+
+# the file name format for the reference cmap files: everything that follows the sample name
+file_exten_generic=duf1220_mols_v_chr1
+file_exten_rcmap=duf1220_mols_v_chr1_r.cmap
+file_exten_qcmap=duf1220_mols_v_chr1_q.cmap
+file_exten_xmap=duf1220_mols_v_chr1.xmap
+
 
 # you can modify this to change the CON3 nick to a nick to the right of CON3 by however many nicks you specify - might be useful for seeing if different nicks recover more molecules
 shift_nicks=0
@@ -36,11 +44,16 @@ shift_nicks=0
 
 # the path to the desired output folder
 output_dir=/vol7/home/eskildseni/LabProjects/irys-duf1220/results/$results_folder
-mkdir $output_dir
+if [ ! -d "$output_dir" ]; then
+    mkdir -p $output_dir
+fi
 
 # the path to the desired output folder with a subfolder that contains the results for only the molecules with adjacent nicks
 output_dir_adjonly=$output_dir/adj-mols-only
-mkdir $output_dir_adjonly
+
+if [ ! -d "$output_dir_adjonly" ]; then
+    mkdir -p $output_dir_adjonly
+fi
 
 # the names of the output files that contain each relevant molecule and the distance between the relevant nicks on each molecule
 hls_output=$output_dir/con2-con3-dist-all-samples-plus-$shift_nicks.txt
