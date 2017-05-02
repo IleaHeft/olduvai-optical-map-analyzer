@@ -16,54 +16,36 @@ touch $output_dir/ref-distances.tab
 touch $hls_output
 touch $con1_output
 
-# Decide which nick distance calculator will be used based on whether you are looking at mol to reference data or mol to contig or contig to ref
-if [ $alignment_type == "MolRef" ]; then
-    
-    echo "alignment_type == MolRef" $alignment_type
 
-    for sample in $(ls $sample_dir | less | cut -f 1 -d "_" | sort | uniq );
-        do
-            echo $sample
-            align_mol_dir=$sample_dir
-            
-            rcmap=$align_mol_dir/$sample"_"$file_exten_rcmap
-            echo "reference cmap file being used is:" $rcmap
-            
-            echo "generating a bed file of nick sites within DUF1220 domains (start of short exon to end of long exon) for" $sample
 
-            grep -v "#" $rcmap | cut -f 5,6 | sed 's/\.[0-9]//g' | awk 'BEGIN{OFS="\t"} {print "chr"wq$1,$2,$2+1}' | sort -k 1,1 -k 2,2n | grep -v "chr0" |\
-            bedtools intersect -wa -wb -a stdin -b $duf_annotation > $duf_nicks
-            
-            
-            # Generate filterted xmap file that removes molecules with secondary mappings of similiar confidence to max confidence and reports only highest confidence alignment for other molecules
-            echo "generating a xmap file with multi-match molecules removed for" $sample
-            xmap=$sample_dir/$sample"_"$file_exten_xmap
-            echo "xmap file being used is:" $xmap
-            python $script_dir/generate-filtered-xmap.py $sample_dir $sample $xmap $conf_spread
-            
-            
-            echo "calculating the distance between CON2 and CON3 nicks for" $sample
-            python $script_dir/nick-distance-calc.py $align_mol_dir $shift_nicks HLS $duf_nicks $output_dir $sample $file_exten_generic >> $hls_output
-            
-            echo "calculating the distance between the CON1 nick and the next closest nick upstream for" $sample
-            python $script_dir/nick-distance-calc.py $align_mol_dir $shift_nicks CON1 $duf_nicks $output_dir $sample $file_exten_generic >> $con1_output
-        done
+for sample in $(ls $sample_dir | less | cut -f 1 -d "_" | sort | uniq );
+    do
+        echo $sample
+        align_mol_dir=$sample_dir
+        
+        rcmap=$align_mol_dir/$sample"_"$file_exten_rcmap
+        echo "reference cmap file being used is:" $rcmap
+        
+        echo "generating a bed file of nick sites within DUF1220 domains (start of short exon to end of long exon) for" $sample
 
-else
+        grep -v "#" $rcmap | cut -f 5,6 | sed 's/\.[0-9]//g' | awk 'BEGIN{OFS="\t"} {print "chr"wq$1,$2,$2+1}' | sort -k 1,1 -k 2,2n | grep -v "chr0" |\
+        bedtools intersect -wa -wb -a stdin -b ~/LabProjects/Irys/annotation-clade-based-numbering-full-domains-2016-11-29.bed > $duf_nicks
+        
+        
+        # Generate filterted xmap file that removes molecules with secondary mappings of similiar confidence to max confidence and reports only highest confidence alignment for other molecules
+        echo "generating a xmap file with multi-match molecules removed for" $sample
+        xmap=$sample_dir/$sample"_"$file_exten_xmap
+        echo "xmap file being used is:" $xmap
+        python $script_dir/generate-filtered-xmap.py $sample_dir $sample $xmap $conf_spread
+        
+        
+        echo "calculating the distance between CON2 and CON3 nicks for" $sample
+        python $script_dir/nick-distance-calc.py $align_mol_dir $shift_nicks HLS $duf_nicks $output_dir $sample $file_exten_generic >> $hls_output
+        
+        echo "calculating the distance between the CON1 nick and the next closest nick upstream for" $sample
+        python $script_dir/nick-distance-calc.py $align_mol_dir $shift_nicks CON1 $duf_nicks $output_dir $sample $file_exten_generic >> $con1_output
+    done
 
-    echo "alignment_type != MolRef, alignment_type is: " $alignment_type
-    
-    #Run the contig to ref and mol to cotig analysis for the HLS region
-    echo "calculating contig to ref and mol to contig distances for the HLS region"
-    bash scripts/run-contig-to-ref-mols-to-contigs.sh HLS
-    
-    #Run the contig to ref and mol to cotig analysis for the HLS region
-    echo "calculating contig to ref and mol to contig distances for the CON1 region"
-    bash scripts/run-contig-to-ref-mols-to-contigs.sh CON1
-    
-    hls_output=$output_dir/$num_samples-mols-to-contigs-HLS-region.txt
-    con1_output=$output_dir/$num_samples-mols-to-contigs-CON1-region.txt
-fi
 
 
 # run the peak caller
