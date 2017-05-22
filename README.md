@@ -7,7 +7,7 @@ You will want to run 2 types of analysis.
 
 You will want to analyze the results of **molecule to reference** alignments, with multimatch on.  
 
-You will also want to analyze the **molecule to contig - contig to reference** alignments, in order to recover information for certain genes (e.g. NBPF19) for which very little information is recovered with the molecule to reference approach.  There are two steps, the first is to analyze the contig to reference data.  The second is to analyze the molecule to contig data.  The results of both of these steps are files that are equivalent to the "con2-con3-distance" files produced by the "standard", molecule to reference analysis.
+You will also want to analyze the **molecule to contig - contig to reference** alignments, in order to recover information for certain genes (e.g. NBPF19) for which very little information is recovered with the molecule to reference approach. You must first run the contig to reference and then the molecule to contig analysis - the current script runs both of these automatically in turn.  
 
 # Analyze the data
 All of the necessary code has been packaged into one script, _irys-analyzer.sh_ with an accompanying _config.sh_ script to set various parameters and file paths.  The script will automatically analyze both HLS region and CON1 region variation. Depending on the **alignment_type** you set in the _config.sh_ script, the _irys-analyzer.sh_ script will run the appropriate analysis.  
