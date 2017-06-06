@@ -16,6 +16,9 @@ touch $output_dir/ref-distances.tab
 touch $hls_output
 touch $con1_output
 
+
+echo "sample directory is:" $sample_dir
+
 # Decide which nick distance calculator will be used based on whether you are looking at mol to reference data or mol to contig or contig to ref
 if [ $alignment_type == "MolRef" ]; then
     
@@ -66,10 +69,14 @@ else
         echo "using distance files for mols to contig" 
         hls_output=$output_dir/$num_samples-mols-to-contigs-HLS-region.txt
         con1_output=$output_dir/$num_samples-mols-to-contigs-CON1-region.txt
+
     else
         echo "using distance files for contigs to ref" 
         hls_output=$output_dir/$num_samples-contigs-to-ref-HLS-region.txt
         con1_output=$output_dir/$num_samples-contigs-to-ref-CON1-region.txt
+        
+        # There is only expected to be one contig for a given region, so makes sense to have the min_mol threshold set to one
+        min_mols_in_cluster=1
     fi
 
 fi
@@ -91,6 +98,14 @@ python $script_dir/sv-caller.py $ref_dist_hls $peak_calls_hls HLS $link_dist $ou
 
 echo "calling SVs for the CON1 region for" $sample
 python $script_dir/sv-caller.py $ref_dist_con1 $peak_calls_con1 CON1 $link_dist $output_dir
+
+
+### make version of the sv all output where homozygous calls are duplicated so that each "allele" is represented by a line
+echo "making sv call file with duplicated homozyougs calls for HLS region"
+python $script_dir/duplicate-sv-call-if-homozygous.py  $output_dir/sv-calls-HLS-2000.txt > $output_dir/sv-calls-HLS-2000-1lineperallele.txt
+
+echo "making sv call file with duplicated homozyougs calls for CON1 region"
+python $script_dir/duplicate-sv-call-if-homozygous.py  $output_dir/sv-calls-CON1-2000.txt > $output_dir/sv-calls-CON1-2000-1lineperallele.txt
 
 # run the zygosity caller
 
@@ -138,6 +153,15 @@ python $script_dir/sv-caller.py $ref_dist_hls $peak_calls_hls_adjonly HLS $link_
 
 echo "calling SVs for the CON1 region for" $sample
 python $script_dir/sv-caller.py $ref_dist_con1 $peak_calls_con1_adjonly CON1 $link_dist $output_dir_adjonly
+
+
+### make version of the sv all output where homozygous calls are duplicated so that each "allele" is represented by a line
+echo "making sv call file with duplicated homozyougs calls for HLS region"
+python $script_dir/duplicate-sv-call-if-homozygous.py  $output_dir_adjonly/sv-calls-HLS-2000.txt > $output_dir_adjonly/sv-calls-HLS-2000-1lineperallele.txt
+
+echo "making sv call file with duplicated homozyougs calls for CON1 region"
+python $script_dir/duplicate-sv-call-if-homozygous.py  $output_dir_adjonly/sv-calls-CON1-2000.txt > $output_dir_adjonly/sv-calls-CON1-2000-1lineperallele.txt
+
 
 # run the zygosity caller
 
