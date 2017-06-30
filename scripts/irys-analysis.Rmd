@@ -1,0 +1,1604 @@
+---
+title: "Analysis of NBPF variation by Irys"
+output: html_notebook
+---
+
+# Shiny App Threshold Analysis
+```{r}
+#ui <- fluidPage(
+ # numericInput(inputId = "num.mols", label = "choose minimum number of molecules", value = 1, min = 1, max = 100),
+  #plotOutput("hist", height = "1000px"))
+
+#server <- function(input, output) {
+  
+ # output$hist <- renderPlot({ plot_all_genes(df = svs.153, min.mols = input$num.mols)} )
+  
+#}
+#shinyApp(ui = ui, server = server)
+```
+
+# Load libraries
+```{r load libraries}
+library(tidyverse)
+library(ggbeeswarm)
+library(ggsci)
+library(readxl)
+library(ggalt)
+```
+
+# Set up ggplot parameters
+```{r}
+
+# G4 yes/no palette
+g4.y.n <- c("#bd0026", "#e31a1c", "#08519c")
+
+# set up color palettes
+aaas <-pal_aaas()
+uchicago <- pal_uchicago()
+trio.pallete <- c("#026611","#03af1d","#FFA319FF")
+
+```
+
+# Set up functions
+## Read in/modify data funciton
+```{r}
+prep_sv <- function(sv.call.file,zygosity.call.file) {
+  svs <- read_tsv(sv.call.file)
+  colnames(svs)[1] <- "gene"
+  svs <- svs %>% mutate(type_group = ifelse(sv.call == "nd", "nd",
+                                          ifelse(sv.call == "ref", "ref","sv")),
+                      support = ifelse(num.mols.in.cluster == 1,"1",">1"))
+  # Read in zygosity call results
+  zygosity.calls <- read_tsv(zygosity.call.file)
+  colnames(zygosity.calls)[1] <- "sample"
+  zygosity.calls <- zygosity.calls %>% mutate(zygosity.code = ifelse(zygosity == "nd",0,ifelse(zygosity == "homozygous",1,2)))
+
+  # Read in information regarding number of different duf domains in each gene in reference
+  
+  ref.features <- read_excel("~/LabProjects/Irys/data/num-features-per-gene-hg38.xlsx")
+  ref.features <- ref.features %>% mutate(nonB.hls.status = ifelse(gene == "NBPF1","P", ifelse(num.nonB.hls > 0, "Y","N")))
+  
+  ref.features <- ref.features %>% mutate(num.triplets = num.nonB.hls + 1)
+
+  pop.data <- read_tsv("~/LabProjects/Irys/data/igsr_samples.tsv")
+  colnames(pop.data) <- c("sample","sex","biosample.id","pop.code","pop.name","superpop.code","superpop.name","collection.type")
+  pop.data <- pop.data %>% select(-biosample.id, -collection.type)
+  
+  for (i in svs$sample) {
+    
+    if (grepl("GM",i) == TRUE) {
+      sample.num <- gsub("GM","",i)
+      new <- paste("NA",sample.num, sep = "")
+      pop.data$sample <- gsub(new,i,pop.data$sample)
+    }
+    }
+
+  
+  # Merge the zygosity call and sv-call results
+  svs <- left_join(svs, pop.data)
+  svs <- left_join(svs, zygosity.calls, by = c("gene","sample")) %>% filter(sv.call != "nd")
+  svs <- left_join(svs,ref.features)
+
+  svs 
+}
+
+
+
+# Possibly should wrap into function
+#num_type_per_gene <- svs %>% group_by(gene,type,nick_type) %>% summarise(count = n()) %>%
+ # mutate(x_pos = 100000)
+#colnames(num_type_per_gene) <- c("gene","type","nick_type","samples_without_data","x_pos")
+```
+## ggplot functions
+### zygosity plot (HLS)
+```{r}
+# Define function to make, and save, a "zygosity view" plot for your gene of interest, with lines drawn for HLS size cues
+make_zygosity_plot <- function(df,GENE,min_tick,max_tick, min_mols, filename.specifics = "") {
+  plot <- ggplot(data = filter(df, num.mols.in.cluster >= min_mols, gene == GENE),
+       mapping = aes(x = reorder(sample,diff.from.ref,median), y = diff.from.ref, color = factor(num.calls))) +
+  geom_hline(yintercept = seq(min_tick,max_tick,1566), color = "#8e9bb2") +
+  geom_hline(yintercept = seq(min_tick,max_tick,4698), color = "#8e9bb2", size = 1.5) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_beeswarm(size = 2,
+                priority = "random",
+                cex = 1) +
+  scale_color_aaas(name = "Number of Calls") +
+  labs(x = "sample", y = "size change from reference", title = GENE) + 
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        legend.title = element_text(size = 20, face = "bold"),
+        legend.text = element_text(size = 20, face = "bold"))  +
+  theme(axis.text.y = element_text(size = 14,
+                                   face = "bold", color = "black")) + 
+  theme(axis.text.x = element_text(size = 6,
+                                   face = "bold", angle=-90, hjust = -0.01, color = "black")) +
+  theme(axis.title.y = element_text(size = 24,
+                                    face = "bold", color = "black")) + 
+  theme(axis.title.x = element_text(size = 24,
+                                    face = "bold", color = "black")) +
+  theme(panel.grid.major.x = element_line(size = 1)) +
+  scale_y_continuous(breaks = seq(min_tick,max_tick,4698))
+  
+  ggsave(filename = paste("~/LabProjects/Irys/results/figures/irys-hls-",tolower(GENE),"-zygosity",filename.specifics,".pdf",sep = ""),
+       width = 11,
+       height = 8.5,
+       units = c("in"))
+  
+  print(plot)
+}
+
+```
+
+### zygosity plot CON1
+```{r}
+# Define function to make, and save, a "zygosity view" plot for your gene of interest, with lines drawn for CON1 size cues
+make_zygosity_plot_con1 <- function(df,GENE,min_tick,max_tick, min.num.mols, filename.specifics = "") {
+  plot <- ggplot(data = filter(df, num.mols.in.cluster >= min.num.mols, gene == GENE),
+       mapping = aes(x = reorder(sample,diff.from.ref,median), y = diff.from.ref, color = factor(num.calls))) +
+  geom_hline(yintercept = seq(min_tick,max_tick,6352), color = "#8e9bb2", size = 1.5) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_beeswarm(size = 2,
+                priority = "random",
+                cex = 1) +
+  scale_color_aaas(name = "Number of Calls") +
+  labs(x = "sample", y = "size change from reference", title = GENE) + 
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        legend.title = element_text(size = 20, face = "bold"),
+        legend.text = element_text(size = 20, face = "bold"))  +
+  theme(axis.text.y = element_text(size = 14,
+                                   face = "bold", color = "black")) + 
+  theme(axis.text.x = element_text(size = 6,
+                                   face = "bold", angle=-90, hjust = -0.01, color = "black")) +
+  theme(axis.title.y = element_text(size = 24,
+                                    face = "bold", color = "black")) + 
+  theme(axis.title.x = element_text(size = 24,
+                                    face = "bold", color = "black")) +
+  theme(panel.grid.major.x = element_line(size = 1)) +
+  scale_y_continuous(breaks = seq(min_tick,max_tick,6352)) 
+  
+  ggsave(filename = paste("~/LabProjects/Irys/results/figures/irys-con1-",tolower(GENE),"-zygosity",filename.specifics,".pdf", sep = ""),
+       width = 11,
+       height = 8.5,
+       units = c("in"))
+  
+  print(plot)
+}
+
+```
+
+### trios all genes - HLS
+```{r}
+# Plot trio data all genes - HLS
+plot_trios_all_genes_hls <- function(df, min_tick, max_tick, min_mols) {
+  
+  df$relation <- factor(df$relation, levels = c("father","mother","child"))
+  
+  plot <- ggplot(data = filter(df,
+                       type.of.nick == "std",
+                       num.mols.in.cluster >= min_mols,
+                       sv.call != "nd"),
+       mapping = aes(x = familyID, y = diff.from.ref, color = relation)) +
+  geom_hline(yintercept = seq(min_tick,max_tick,4698), color = "#8e9bb2", size = 1.5) + 
+  geom_hline(yintercept = 0, color = "black", size = 1.5) +
+  geom_quasirandom(size = 2,alpha = 0.8) +
+  scale_color_manual(values = trio.pallete) +
+  labs(x = "family", y = "size change from reference") + 
+  theme_bw() +
+  theme(legend.position = "bottom")  +
+  theme(axis.text.x = element_text(size = 10,
+                                   face = "bold", color = "black", angle = -45, hjust = -0.1)) + 
+  theme(axis.text.y = element_text(size = 10,
+                                   face = "bold", color = "black")) +
+  theme(axis.title.x = element_text(size = 15,
+                                    face = "bold", color = "black")) + 
+  theme(axis.title.y = element_text(size = 15,
+                                    face = "bold", color = "black")) +
+  theme(panel.grid.major.x = element_line(size = 4)) +
+  facet_grid(~ gene) +
+  scale_y_continuous(breaks = seq(min_tick,max_tick,4698))
+  
+  ggsave(filename = paste("~/LabProjects/Irys/results/figures/trios/irys-hls-all-genes-trios-minmols",min_mols,".pdf", sep = ""),
+       width = 11,
+       height = 8.5,
+       units = c("in"))
+  
+  print(plot)
+}
+```
+
+### trios all genes - CON1
+```{r}
+plot_trios_all_genes_con1 <- function(df, min_tick, max_tick, min_mols) {
+  plot <- ggplot(data = filter(df,
+                       type.of.nick == "std",
+                       num.mols.in.cluster >= min_mols,
+                       sv.call != "nd"),
+       mapping = aes(x = familyID, y = diff.from.ref, color = relation)) +
+  geom_hline(yintercept = seq(min_tick,max_tick,6352), color = "#8e9bb2", size = 1.5) + 
+  geom_hline(yintercept = 0, color = "black", size = 1.5) +
+  geom_quasirandom(size = 2,alpha = 0.8) +
+  scale_color_manual(values = trio.pallete) +
+  labs(x = "family", y = "size change from reference") + 
+  theme_bw() +
+  theme(legend.position = "bottom")  +
+  theme(axis.text.x = element_text(size = 10,
+                                   face = "bold", color = "black", angle = -45, hjust = -0.1)) + 
+  theme(axis.text.y = element_text(size = 10,
+                                   face = "bold", color = "black")) +
+  theme(axis.title.x = element_text(size = 15,
+                                    face = "bold", color = "black")) + 
+  theme(axis.title.y = element_text(size = 15,
+                                    face = "bold", color = "black")) +
+  theme(panel.grid.major.x = element_line(size = 4)) +
+  facet_grid(~ gene) +
+  scale_y_continuous(breaks = seq(min_tick,max_tick,6352))
+  
+  ggsave(filename = paste("~/LabProjects/Irys/results/figures/trios/irys-con1-all-genes-trios-minmols",min_mols,".pdf", sep = ""),
+       width = 11,
+       height = 8.5,
+       units = c("in"))
+  
+  print(plot)
+
+}
+
+```
+
+### trios zygosity HLS specific gene
+```{r}
+make_zygosity_plot_hls_trios <- function(df,GENE,min_tick,max_tick, min_mols, filename.specifics = "") {
+  
+  df$relation <- factor(df$relation, levels = c("father", "mother", "child"))
+  
+  plot <- ggplot(data = filter(df, num.mols.in.cluster >= min_mols, gene == GENE),
+       mapping = aes(x = relation, y = diff.from.ref, color = relation)) +
+  geom_hline(yintercept = seq(min_tick,max_tick,1566), color = "#8e9bb2") +
+  geom_hline(yintercept = seq(min_tick,max_tick,4698), color = "#8e9bb2", size = 1.5) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_beeswarm(size = 2.5,
+                priority = "random",
+                cex = 1) +
+  scale_color_manual(values = trio.pallete) +
+  labs(x = "sample", y = "size change from reference", title = GENE) + 
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        legend.title = element_text(size = 20, face = "bold"),
+        legend.text = element_text(size = 20, face = "bold"))  +
+  theme(axis.text.y = element_text(size = 14,
+                                   face = "bold", color = "black")) + 
+  theme(axis.text.x = element_text(size = 6,
+                                   face = "bold", angle=-90, hjust = -0.01, color = "black")) +
+  theme(axis.title.y = element_text(size = 24,
+                                    face = "bold", color = "black")) + 
+  theme(axis.title.x = element_text(size = 24,
+                                    face = "bold", color = "black")) +
+  theme(panel.grid.major.x = element_line(size = 1)) +
+  scale_y_continuous(breaks = seq(min_tick,max_tick,4698)) +
+    facet_grid(~ familyID, scales = "free")
+  
+  ggsave(filename = paste("~/LabProjects/Irys/results/figures/irys-hls-",tolower(GENE),"-zygosity",filename.specifics,".pdf",sep = ""),
+       width = 11,
+       height = 8.5,
+       units = c("in"))
+  
+  print(plot)
+}
+
+```
+
+### trios zygosity CON1 specific gene
+```{r}
+make_zygosity_plot_con1_trios <- function(df,GENE,min_tick,max_tick, min.num.mols, filename.specifics = "") {
+  
+  df$relation <- factor(df$relation, levels = c("father", "mother", "child"))
+  plot <- ggplot(data = filter(df, num.mols.in.cluster >= min.num.mols, gene == GENE),
+       mapping = aes(x = relation, y = diff.from.ref, color = relation)) +
+  geom_hline(yintercept = seq(min_tick,max_tick,6352), color = "#8e9bb2", size = 1.5) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_beeswarm(size = 2.5,
+                priority = "random",
+                cex = 1) +
+  scale_color_manual(values = trio.pallete) +
+  labs(x = "sample", y = "size change from reference", title = GENE) + 
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        legend.title = element_text(size = 20, face = "bold"),
+        legend.text = element_text(size = 20, face = "bold"))  +
+  theme(axis.text.y = element_text(size = 18,
+                                   face = "bold", color = "black")) + 
+  theme(axis.text.x = element_text(size = 28,
+                                   face = "bold", angle=-90, hjust = -0.01, color = "black")) +
+  theme(axis.title.y = element_text(size = 24,
+                                    face = "bold", color = "black")) + 
+  theme(axis.title.x = element_text(size = 24,
+                                    face = "bold", color = "black")) +
+  theme(panel.grid.major.x = element_line(size = 1)) +
+  scale_y_continuous(breaks = seq(min_tick,max_tick,6352)) + 
+  facet_grid(~ familyID, scales = "free")
+  
+  ggsave(filename = paste("~/LabProjects/Irys/results/figures/irys-con1-",tolower(GENE),"-zygosity",filename.specifics,".pdf", sep = ""),
+       width = 11,
+       height = 8.5,
+       units = c("in"))
+  
+  print(plot)
+}
+```
+
+# HLS region data (distance between nicks in CON2 and CON3)
+## Read in trio data
+```{r}
+# Look at trio results
+svs.trios <- prep_sv(sv.call.file = "~/LabProjects/Irys/results/3trios-samples-link2000-minmols2-filtmulti1-20170501/adj-mols-only/sv-calls-HLS-2000.txt",zygosity.call.file = "~/LabProjects/Irys/results/3trios-samples-link2000-minmols2-filtmulti1-20170501/adj-mols-only/zygosity-calls-HLS-2000.txt")
+
+
+# Add information about the family structures
+trio1 <- data.frame(familyID = c("NA12","NA12","NA12"),
+                    sample = c("NA12891","NA12892","NA12878"),
+                    relation = c("father","mother","child"))
+
+trio2 <- data.frame(familyID = c("GM19","GM19","GM19"),
+                    sample = c("GM19239","GM19238","GM19240"),
+                    relation = c("father","mother","child"))
+
+trio3 <- data.frame(familyID = c("NA24","NA24","NA24"),
+                    sample = c("NA24149","NA24143","NA24385"),
+                    relation = c("father","mother","child"))
+
+trios <- rbind(trio1,trio2,trio3)
+
+svs.famdata <- merge(svs.trios,trios, by = "sample")
+```
+
+
+
+## Read in 153 samples
+```{r}
+svs.153 <- prep_sv(sv.call.file = "~/LabProjects/Irys/results/MolRef/153samples-link2000-minmols2-filtmulti1-20170522/sv-calls-HLS-2000.txt",
+                   zygosity.call.file = "~/LabProjects/Irys/results/MolRef/153samples-link2000-minmols2-filtmulti1-20170522/zygosity-calls-HLS-2000.txt")
+
+
+svs.153.homozy.dup <- prep_sv(sv.call.file = "~/LabProjects/Irys/results/MolRef/153samples-link2000-minmols2-filtmulti1-20170522/sv-calls-HLS-2000-1lineperallele.txt",
+                   zygosity.call.file = "~/LabProjects/Irys/results/MolRef/153samples-link2000-minmols2-filtmulti1-20170522/zygosity-calls-HLS-2000.txt")
+
+svs.153 <- svs.153 %>% filter(sample != "HG00732")
+svs.153.homozy.dup <- svs.153.homozy.dup %>% filter(sample != "HG00732")
+
+```
+
+## Plot trio data
+### All genes trios
+```{r}
+
+plot_trios_all_genes_hls(df = svs.famdata, min_tick = -14094, max_tick = 56376, min_mols = 1)
+plot_trios_all_genes_hls(df = svs.famdata, min_tick = -14094, max_tick = 56376, min_mols = 2)
+plot_trios_all_genes_hls(df = svs.famdata, min_tick = -14094, max_tick = 56376, min_mols = 3)
+```
+
+### Specific genes trios
+#### NBPF1
+```{r}
+make_zygosity_plot_hls_trios(df = svs.famdata, GENE = "NBPF1", min_tick = -14094, max_tick = 56376, min_mols = 1, filename.specifics = "-trios")
+make_zygosity_plot_hls_trios(df = svs.famdata, GENE = "NBPF1", min_tick = -14094, max_tick = 56376, min_mols = 2, filename.specifics = "-trios")
+make_zygosity_plot_hls_trios(df = svs.famdata, GENE = "NBPF1", min_tick = -14094, max_tick = 56376, min_mols = 3, filename.specifics = "-trios")
+```
+
+#### NBPF10
+```{r}
+make_zygosity_plot_hls_trios(df = svs.famdata, GENE = "NBPF10", min_tick = -14094, max_tick = 56376, min_mols = 1, filename.specifics = "-trios")
+make_zygosity_plot_hls_trios(df = svs.famdata, GENE = "NBPF10", min_tick = -14094, max_tick = 56376, min_mols = 2, filename.specifics = "-trios")
+make_zygosity_plot_hls_trios(df = svs.famdata, GENE = "NBPF10", min_tick = -14094, max_tick = 56376, min_mols = 3, filename.specifics = "-trios")
+
+```
+
+#### NBPF14
+```{r}
+make_zygosity_plot_hls_trios(df = svs.famdata, GENE = "NBPF14", min_tick = -14094, max_tick = 56376, min_mols =1, filename.specifics = "-trios")
+make_zygosity_plot_hls_trios(df = svs.famdata, GENE = "NBPF14", min_tick = -14094, max_tick = 56376, min_mols =2, filename.specifics = "-trios")
+make_zygosity_plot_hls_trios(df = svs.famdata, GENE = "NBPF14", min_tick = -14094, max_tick = 56376, min_mols =3, filename.specifics = "-trios")
+```
+
+#### NBPF17P
+```{r}
+make_zygosity_plot_hls_trios(df = svs.famdata, GENE = "NBPF17P", min_tick = -14094, max_tick = 56376, min_mols =1, filename.specifics = "-trios")
+make_zygosity_plot_hls_trios(df = svs.famdata, GENE = "NBPF17P", min_tick = -14094, max_tick = 56376, min_mols =2, filename.specifics = "-trios")
+make_zygosity_plot_hls_trios(df = svs.famdata, GENE = "NBPF17P", min_tick = -14094, max_tick = 56376, min_mols =3, filename.specifics = "-trios")
+```
+
+#### NBPF25P
+```{r}
+make_zygosity_plot_hls_trios(df = svs.famdata, GENE = "NBPF25P", min_tick = -14094, max_tick = 56376, min_mols =1, filename.specifics = "-trios")
+make_zygosity_plot_hls_trios(df = svs.famdata, GENE = "NBPF25P", min_tick = -14094, max_tick = 56376, min_mols =2, filename.specifics = "-trios")
+make_zygosity_plot_hls_trios(df = svs.famdata, GENE = "NBPF25P", min_tick = -14094, max_tick = 56376, min_mols =3, filename.specifics = "-trios")
+```
+
+
+### NBPF1 trios
+```{r}
+ggplot(data = filter(svs.famdata, support == ">1",
+gene == "NBPF1",
+type_group != "nd"),
+mapping = aes(x = gene, y = diff.from.ref, color = relation)) +
+  geom_hline(yintercept = seq(1566,65000,1566), color = aaas(4)[1]) +
+  geom_hline(yintercept = seq(4698,65000,4698), color = aaas(4)[1]) +
+  geom_hline(yintercept = seq(3132,65000,4698), color = aaas(4)[1]) + 
+  geom_hline(yintercept = 0, color = "darkgrey") + 
+  geom_beeswarm(size = 3,
+                priority = "random",
+                cex = 1,
+                alpha = 0.65) +
+  scale_color_uchicago() +
+  labs(y = "size change relative to reference", x = "Gene") + 
+  scale_y_continuous(breaks = seq(0,65000,1566), limits = c(0,65000)) +
+  theme_bw() +
+  theme(legend.position = "bottom")  +
+  theme(axis.text.x = element_text(size = 10,
+                                   face = "bold", color = "black", angle = -45, hjust = -0.1)) + 
+  theme(axis.text.y = element_text(size = 10,
+                                   face = "bold", color = "black")) +
+  theme(axis.title.x = element_text(size = 15,
+                                    face = "bold", color = "black")) + 
+  theme(axis.title.y = element_text(size = 15,
+                                    face = "bold", color = "black")) +  facet_grid(familyID ~ .) + coord_flip()
+
+ggsave("~/LabProjects/Irys/results/nbpf1-irys-trio-results.pdf",
+       width = 11,
+       height = 8.5,
+       units = c("in"))
+```
+
+
+
+### NBPF10 trios
+```{r}
+ggplot(data = filter(svs.famdata, support == ">1",
+gene == "NBPF10",
+type_group != "nd"),
+mapping = aes(x = gene, y = diff.from.ref, color = relation)) +
+  geom_hline(yintercept = seq(1566,46980,1566), color = aaas(4)[1]) +
+  geom_hline(yintercept = seq(-28188,-1566,1566), color = aaas(4)[1]) +
+  geom_hline(yintercept = seq(-32886,-4698,4698), color = aaas(4)[1]) + 
+  geom_hline(yintercept = seq(4698,46980,4698), color = aaas(4)[1]) +
+  geom_hline(yintercept = seq(3132,46980,4698), color = aaas(4)[1]) + 
+  geom_hline(yintercept = seq(-31320,0,4698), color = aaas(4)[1]) + 
+  geom_hline(yintercept = 0, color = "darkgrey", size = 1.25) + 
+  geom_beeswarm(size = 3,
+                priority = "random",
+                cex = 1,
+                alpha = 0.65) +
+  scale_color_uchicago() +
+  labs(y = "size change relative to reference", x = "Gene") + 
+  scale_y_continuous(breaks = seq(0,65000,1566), limits = c(0,65000)) +
+  theme_bw() +
+  theme(legend.position = "bottom")  +
+  theme(axis.text.x = element_text(size = 10,
+                                   face = "bold", color = "black", angle = -45, hjust = -0.1)) + 
+  theme(axis.text.y = element_text(size = 10,
+                                   face = "bold", color = "black")) +
+  theme(axis.title.x = element_text(size = 15,
+                                    face = "bold", color = "black")) + 
+  theme(axis.title.y = element_text(size = 15,
+                                    face = "bold", color = "black")) +  facet_grid(familyID ~ .) + coord_flip()
+
+ggsave("~/LabProjects/Irys/results/nbpf10-irys-trio-results.pdf",
+       width = 11,
+       height = 8.5,
+       units = c("in"))
+```
+### NBPF12 trios
+```{r}
+ggplot(data = filter(svs.famdata, support == ">1",
+gene == "NBPF12",
+type_group != "nd"),
+mapping = aes(x = gene, y = diff.from.ref, color = relation)) +
+  geom_hline(yintercept = seq(1566,95000,1566), color = aaas(4)[1]) +
+  geom_hline(yintercept = seq(-1566,0,1566), color = aaas(4)[1]) +
+  geom_hline(yintercept = seq(4698,95000,4698), color = aaas(4)[1]) + 
+  geom_hline(yintercept = seq(3132,95000,4698), color = aaas(4)[1]) + 
+  geom_hline(yintercept = 0, color = "darkgrey", size = 1.25) + 
+  geom_beeswarm(size = 3,
+                priority = "random",
+                cex = 1,
+                alpha = 0.65) +
+  scale_color_uchicago() +
+  labs(y = "size change relative to reference", x = "Gene") + 
+  scale_y_continuous(breaks = seq(-1566, 94000,1566), limits = c(-1566,94000)) +
+  theme_bw() +
+  theme(legend.position = "bottom")  +
+  theme(axis.text.x = element_text(size = 10,
+                                   face = "bold", color = "black", angle = -45, hjust = -0.1)) + 
+  theme(axis.text.y = element_text(size = 10,
+                                   face = "bold", color = "black")) +
+  theme(axis.title.x = element_text(size = 15,
+                                    face = "bold", color = "black")) + 
+  theme(axis.title.y = element_text(size = 15,
+                                    face = "bold", color = "black")) +  facet_grid(familyID ~ .) + coord_flip()
+
+ggsave("~/LabProjects/Irys/results/nbpf10-irys-trio-results.pdf",
+       width = 11,
+       height = 8.5,
+       units = c("in"))
+
+
+  
+```
+
+
+
+### NBPF14 trios
+```{r}
+ggplot(data = filter(svs.famdata, support == ">1",
+gene == "NBPF14",
+type_group != "nd"),
+mapping = aes(x = gene, y = diff.from.ref, color = relation)) +
+  geom_hline(yintercept = seq(1566,55000,1566), color = aaas(4)[1]) +
+  geom_hline(yintercept = seq(-29754,-1566,1566), color = aaas(4)[1]) +
+  geom_hline(yintercept = seq(-32886,-4698,4698), color = aaas(4)[1]) + 
+  geom_hline(yintercept = seq(4698,55000,4698), color = aaas(4)[1]) +
+  geom_hline(yintercept = seq(3132,55000,4698), color = aaas(4)[1]) + 
+  geom_hline(yintercept = seq(-31320,0,4698), color = aaas(4)[1]) + 
+  geom_hline(yintercept = 0, color = "darkgrey", size = 1.25) + 
+  geom_beeswarm(size = 3,
+                priority = "random",
+                cex = 1,
+                alpha = 0.65) +
+  scale_color_uchicago() +
+  labs(y = "size change relative to reference", x = "Gene") + 
+  scale_y_continuous(breaks = seq(-31320,55000,1566), limits = c(-33000,55000)) +
+  theme_bw() +
+  theme(legend.position = "bottom")  +
+  theme(axis.text.x = element_text(size = 10,
+                                   face = "bold", color = "black", angle = -45, hjust = -0.1)) + 
+  theme(axis.text.y = element_text(size = 10,
+                                   face = "bold", color = "black")) +
+  theme(axis.title.x = element_text(size = 15,
+                                    face = "bold", color = "black")) + 
+  theme(axis.title.y = element_text(size = 15,
+                                    face = "bold", color = "black")) +  facet_grid(familyID ~ .) + coord_flip()
+
+ggsave("~/LabProjects/Irys/results/nbpf14-irys-trio-results.pdf",
+       width = 11,
+       height = 8.5,
+       units = c("in"))
+```
+
+
+### NBPF17P trios
+```{r}
+ggplot(data = filter(svs.famdata, support == ">1",
+gene == "NBPF17P",
+type_group != "nd"),
+mapping = aes(x = gene, y = diff.from.ref, color = relation)) +
+  geom_hline(yintercept = seq(1566,46980,1566), color = aaas(4)[1]) +
+  geom_hline(yintercept = seq(-28188,-1566,1566), color = aaas(4)[1]) +
+  geom_hline(yintercept = seq(-32886,-4698,4698), color = aaas(4)[1]) + 
+  geom_hline(yintercept = seq(4698,46980,4698), color = aaas(4)[1]) +
+  geom_hline(yintercept = seq(3132,46980,4698), color = aaas(4)[1]) + 
+  geom_hline(yintercept = seq(-31320,0,4698), color = aaas(4)[1]) + 
+  geom_hline(yintercept = 0, color = "darkgrey", size = 1.25) + 
+  geom_beeswarm(size = 2,
+                alpha = 0.65,
+                priority = "random",
+                cex = 1) +
+  scale_color_uchicago() +
+  labs(y = "size change relative to reference", x = "Gene") + 
+  scale_y_continuous(breaks = seq(-9396, 9396,1566), limits = c(-9396,9396)) +
+  theme_bw() +
+ theme(legend.position = "bottom")  +
+  theme(axis.text.x = element_text(size = 15,
+                                   face = "bold.italic", color = "black")) + 
+  theme(axis.text.y = element_text(size = 10,
+                                   face = "bold", color = "black")) +
+  theme(axis.title.x = element_text(size = 15,
+                                    face = "bold", color = "black")) + 
+  theme(axis.title.y = element_text(size = 15,
+                                    face = "bold", color = "black")) + facet_grid(familyID ~ .) + coord_flip()
+
+
+ggsave("~/LabProjects/Irys/results/nbpf17p-irys-trio-results.pdf",
+       width = 11,
+       height = 8.5,
+       units = c("in"))
+```
+
+
+## Plot 153 samples
+scale_x_discrete(limits = c("NBPF12",
+"NBPF1",
+"NBPF10",
+"NBPF14",
+"NBPF9",
+"NBPF11",
+"NBPF8",
+"NBPF15",
+"NBPF17P",
+"NBPF25P")))
+### All genes
+```{r}
+
+plot_all_genes <- function(df, min.mols, file.name.specifics = "") {
+
+
+df$nonB.hls.status <- factor(df$nonB.hls.status, levels = c("P","Y","N"))
+
+
+num.samples.per.gene.hls <- df %>% 
+  filter(num.mols.in.cluster >= min.mols) %>% 
+  distinct(gene,sample) %>% 
+  group_by(gene) %>%
+  summarise(count = n())
+
+df <- left_join(df, num.samples.per.gene.hls, by = "gene")
+
+df <- df %>% mutate(gene.label = paste(gene," (",num.triplets,")", " n=",count, sep = ""))
+
+gene.levels <- df %>%
+  filter(num.mols.in.cluster >= min.mols) %>%
+  group_by(gene.label, nonB.hls.status) %>% 
+  summarise(min.value = min(diff.from.ref), median.value = median(diff.from.ref), max.value = max(diff.from.ref),   count = n()) %>% 
+  mutate(range = max.value - min.value) %>%
+  arrange(nonB.hls.status, desc(range))
+
+df$gene.label <- factor(df$gene.label, levels = gene.levels$gene.label)
+
+plot(ggplot(data = filter(df, num.mols.in.cluster >= min.mols),
+       mapping = aes(x = gene.label, y = diff.from.ref, color = nonB.hls.status)) +
+  geom_hline(yintercept = seq(-37584,89262,1566), color = "#8e9bb2") +
+  geom_hline(yintercept = seq(-37584,89262,4698), color = "#8e9bb2", size = 1.5) +
+  geom_quasirandom(size = 2,
+                alpha = 0.65,
+                cex = 1) +
+  scale_color_manual(values = g4.y.n, name = "Presence of G4-Sapientin triplet in hg38") +
+  labs(x = "gene", y = "size change from reference") +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        legend.text = element_text(size = 22, face = "bold"),
+        legend.title = element_text(size = 22, face = "bold"))  +
+  theme(axis.text.y = element_text(size = 12,
+                                   face = "bold", color = "black")) + 
+  theme(axis.text.x = element_text(size = 22,
+                                   face = "bold", angle=-90, hjust = -0.01, color = "black")) +
+  theme(axis.title.y = element_text(size = 24,
+                                    face = "bold", color = "black")) + 
+  theme(axis.title.x = element_text(size = 24,
+                                    face = "bold", color = "black")) +
+  theme(panel.grid.major.x = element_line(size = 3)) +
+  scale_y_continuous(breaks = seq(-37584,89262,4698)))
+  
+
+ggsave(filename = paste("~/LabProjects/Irys/results/figures/irys-hls-region-all-genes-",file.name.specifics,".pdf", sep = ""),
+       width = 11,
+       height = 8.5,
+       units = "in")
+}
+
+```
+
+
+```{r}
+plot_all_genes(df = svs.153, min.mols = 2, file.name.specifics = "min2mols")
+plot_all_genes(df = svs.153.homozy.dup, min.mols = 4, file.name.specifics = "min4mols")
+```
+
+
+
+
+
+
+```{r}
+plot_all_genes(df = svs.153.homozy.dup, min.mols = 2, file.name.specifics = "min2mols")
+plot_all_genes(df = svs.153.homozy.dup, min.mols = 3, file.name.specifics = "min3mols")
+plot_all_genes(df = svs.153.homozy.dup, min.mols = 4, file.name.specifics = "min4mols")
+plot_all_genes(df = svs.153.homozy.dup, min.mols = 5, file.name.specifics = "min5mols")
+plot_all_genes(df = svs.153.homozy.dup, min.mols = 6, file.name.specifics = "min6mols")
+plot_all_genes(df = svs.153.homozy.dup, min.mols = 7, file.name.specifics = "min7mols")
+plot_all_genes(df = svs.153.homozy.dup, min.mols = 8, file.name.specifics = "min8mols")
+plot_all_genes(df = svs.153.homozy.dup, min.mols = 15, file.name.specifics = "min15mols")
+```
+
+# Experimental plot
+```{r}
+
+make_zygosity_plot_exp <- function(df,GENE,min_tick,max_tick, min.num.mols, filename.specifics = "") {
+  
+  
+  sample.levels <- df %>%
+  filter(num.mols.in.cluster >= min.num.mols) %>%
+  group_by(sample,gene) %>% 
+  summarise(min.value = min(diff.from.ref), median.value = median(diff.from.ref), max.value = max(diff.from.ref),   count = n()) %>% 
+  mutate(range = max.value - min.value) %>%
+  arrange(gene,count,median.value) %>% 
+  filter(gene == GENE)
+
+  df$sample <- factor(df$sample, levels = sample.levels$sample)
+  
+  plot <- ggplot(df %>% filter(num.mols.in.cluster >= min.num.mols, gene == GENE),
+       mapping = aes(x = sample, y = diff.from.ref, color = factor(num.calls))) +
+  geom_hline(yintercept = seq(min_tick,max_tick,1566), color = "#8e9bb2") +
+  geom_hline(yintercept = seq(min_tick,max_tick,4698), color = "#8e9bb2", size = 1.5) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_beeswarm(size = 2.5,
+                priority = "random",
+                cex = 1) +
+  scale_color_aaas(name = "Number of Calls") +
+  labs(x = "sample", y = "size change from reference", title = GENE) + 
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        legend.title = element_text(size = 20, face = "bold"),
+        legend.text = element_text(size = 20, face = "bold"))  +
+  theme(axis.text.y = element_text(size = 14,
+                                   face = "bold", color = "black")) + 
+  theme(axis.text.x = element_text(size = 6,
+                                   face = "bold", angle=-90, hjust = -0.01, color = "black")) +
+  theme(axis.title.y = element_text(size = 24,
+                                    face = "bold", color = "black")) + 
+  theme(axis.title.x = element_text(size = 24,
+                                    face = "bold", color = "black")) +
+  theme(panel.grid.major.x = element_line(size = 1)) +
+  scale_y_continuous(breaks = seq(min_tick,max_tick,1566))
+  
+  ggsave(filename = paste("~/LabProjects/Irys/results/figures/irys-hls-",tolower(GENE),"-zygosity",filename.specifics,".pdf",sep = ""),
+       width = 11,
+       height = 8.5,
+       units = c("in"))
+  
+  print(plot)
+}
+
+```
+
+```{r}
+make_zygosity_plot_exp(df = svs.153, GENE = "NBPF1", min_tick = 0, max_tick = 60000, min.num.mols = 5)
+```
+
+
+
+
+### NBPF1
+#### NBPF1 zygosity calls
+```{r}
+make_zygosity_plot(df = svs.153, GENE = "NBPF1", min_tick = 0, max_tick = 60000, min.num.mols = 2)
+```
+
+#### NBPF1 zygosity view, size based on number of molecules
+```{r}
+ggplot(data = filter(svs.153, support == ">1", gene == "NBPF1"),
+       mapping = aes(x = reorder(sample,diff.from.ref,median), y = diff.from.ref, color = factor(num.calls), size = num.mols.in.cluster)) +
+  geom_beeswarm(alpha = 0.65,
+                priority = "random",
+                cex = 1) +
+  scale_color_aaas(name = "Number of Calls") +
+  labs(x = "sample", y = "size change from reference", title = "NBPF1") + 
+  theme_bw() +
+  theme(legend.position = "bottom")  +
+  scale_y_continuous(breaks = seq(0,60000,1566)) +
+  geom_hline(yintercept = seq(1566,60000,1566), color = aaas(4)[1]) +
+  theme(axis.text.y = element_text(size = 6,
+                                   face = "bold", color = "black")) + 
+  theme(axis.text.x = element_text(size = 4.75,
+                                   face = "bold", angle=-55, hjust = -0.01, color = "black")) +
+  theme(axis.title.y = element_text(size = 6,
+                                    face = "bold", color = "black")) + 
+  theme(axis.title.x = element_text(size = 6,
+                                    face = "bold", color = "black")) +
+  theme(panel.grid.major.x = element_line(size = 2.5))
+```
+
+
+#### NBPF1 beeswarm view
+```{r}
+ggplot(data = filter(svs.153, support == ">1",
+gene == "NBPF1",
+type_group != "nd"),
+mapping = aes(x = gene, y = diff.from.ref, color = factor(num.calls))) +
+  geom_beeswarm(size = 3,
+                priority = "random",
+                cex = 1) +
+  geom_hline(yintercept = seq(1566,65000,1566), color = aaas(4)[1]) +
+  geom_hline(yintercept = seq(4698,65000,4698), color = aaas(4)[1]) +
+  geom_hline(yintercept = seq(3132,65000,4698), color = aaas(4)[1]) + 
+  geom_hline(yintercept = 0, color = "darkgrey") + 
+  scale_color_aaas(name = "Number of Calls") +
+  labs(y = "size change relative to reference", x = "Gene") + 
+  scale_y_continuous(breaks = seq(0,65000,1566), limits = c(0,65000)) +
+  theme_bw() +
+  theme(legend.position = "bottom")  +
+  theme(axis.text.x = element_text(size = 10,
+                                   face = "bold", color = "black", angle = -45, hjust = -0.1)) + 
+  theme(axis.text.y = element_text(size = 10,
+                                   face = "bold", color = "black")) +
+  theme(axis.title.x = element_text(size = 15,
+                                    face = "bold", color = "black")) + 
+  theme(axis.title.y = element_text(size = 15,
+                                    face = "bold", color = "black")) + coord_flip()
+
+```
+
+### NBPF11
+#### NBPF11 zygosity calls
+```{r}
+make_zygosity_plot(df = svs.153, GENE = "NBPF11",min_tick = -18792, max_tick = 4698, min.num.mols = 2)
+```
+
+### NBPF12
+#### NBPF12 zygosity view
+
+```{r}
+make_zygosity_plot_exp(df = svs.153, GENE = "NBPF12",min_tick = -4698, max_tick = 89262, min.num.mols = 2)
+```
+
+
+```{r}
+make_zygosity_plot(df = svs.153, GENE = "NBPF12",min_tick = -4698, max_tick = 89262, min.num.mols = 10)
+```
+
+
+### NBPF10
+#### NBPF10 zygosity calls
+```{r}
+make_zygosity_plot_exp(df = svs.153, GENE = "NBPF10",min_tick = -37584, max_tick = 46980, min.num.mols = 2)
+```
+
+```{r}
+make_zygosity_plot(df = svs.153, GENE = "NBPF10",min_tick = -37584, max_tick = 46980, min.num.mols = 2)
+```
+
+
+### NBPF14
+#### NBPF14 zygosity calls
+```{r}
+make_zygosity_plot_exp(df = svs.153, GENE = "NBPF14", min_tick = -28188, max_tick = 51678, min.num.mols = 2)
+```
+
+```{r}
+make_zygosity_plot(df = svs.153, GENE = "NBPF14", min_tick = -28188, max_tick = 51678, min.num.mols = 2)
+```
+
+### NBPF9
+#### NBPF9 zygosity view
+```{r}
+make_zygosity_plot(df = svs.153, GENE = "NBPF9", min_tick = -4698, max_tick = 4698, min.num.mols = 2)
+```
+
+### NBPF8
+#### NBPF8 zygosity view
+```{r}
+make_zygosity_plot(df = svs.153, GENE = "NBPF8", min_tick = -9396, max_tick = 4698, min.num.mols = 2)
+```
+
+## Histograms of SVs by gene
+```{r}
+ggplot(data = filter(svs.153, type.of.nick == "std", support == ">1"), mapping = aes(x = diff.from.ref)) +
+  geom_histogram(binwidth = 1000) + 
+  facet_wrap(~ gene)
+```
+
+
+
+
+# CON1 analyses
+
+## Read in CON1 trio data
+```{r}
+svs.trios.con1 <- prep_sv(sv.call.file = "~/LabProjects/Irys/results/3trios-samples-link2000-minmols2-filtmulti1-20170501/adj-mols-only/sv-calls-CON1-2000.txt",zygosity.call.file = "~/LabProjects/Irys/results/3trios-samples-link2000-minmols2-filtmulti1-20170501/adj-mols-only/zygosity-calls-CON1-2000.txt")
+
+svs.famdata.con1 <- merge(svs.trios.con1,trios, by = "sample")
+```
+## Plot CON1 trio data
+
+ 
+### All genes trios
+```{r}
+
+plot_trios_all_genes_con1(df = svs.famdata.con1, min_tick = -19056, max_tick = 12704, min_mols = 4)
+plot_trios_all_genes_con1(df = svs.famdata.con1, min_tick = -19056, max_tick = 12704, min_mols = 3)
+plot_trios_all_genes_con1(df = svs.famdata.con1, min_tick = -19056, max_tick = 12704, min_mols = 2)
+plot_trios_all_genes_con1(df = svs.famdata.con1, min_tick = -19056, max_tick = 12704, min_mols = 1)
+```
+
+### Plots of trio data for specific genes
+#### NBPF8
+```{r}
+make_zygosity_plot_con1_trios(df = svs.famdata.con1, GENE = "NBPF8", min_tick = -12704, max_tick = 12704, min.num.mols = 1, filename.specifics = "trios")
+make_zygosity_plot_con1_trios(df = svs.famdata.con1, GENE = "NBPF8", min_tick = -12704, max_tick = 12704, min.num.mols = 2, filename.specifics = "trios")
+make_zygosity_plot_con1_trios(df = svs.famdata.con1, GENE = "NBPF8", min_tick = -12704, max_tick = 12704, min.num.mols = 3, filename.specifics = "trios")
+```
+
+#### NBPF9
+```{r}
+make_zygosity_plot_con1_trios(df = svs.famdata.con1, GENE = "NBPF9", min_tick = -12704, max_tick = 12704, min.num.mols = 1, filename.specifics = "trios")
+make_zygosity_plot_con1_trios(df = svs.famdata.con1, GENE = "NBPF9", min_tick = -12704, max_tick = 12704, min.num.mols = 2, filename.specifics = "trios")
+make_zygosity_plot_con1_trios(df = svs.famdata.con1, GENE = "NBPF9", min_tick = -12704, max_tick = 12704, min.num.mols = 3, filename.specifics = "trios")
+```
+
+#### NBPF10
+```{r}
+make_zygosity_plot_con1_trios(df = svs.famdata.con1, GENE = "NBPF10", min_tick = -12704, max_tick = 12704, min.num.mols = 1, filename.specifics = "trios")
+make_zygosity_plot_con1_trios(df = svs.famdata.con1, GENE = "NBPF10", min_tick = -12704, max_tick = 12704, min.num.mols = 2, filename.specifics = "trios")
+make_zygosity_plot_con1_trios(df = svs.famdata.con1, GENE = "NBPF10", min_tick = -12704, max_tick = 12704, min.num.mols = 3, filename.specifics = "trios")
+```
+
+#### NBPF17P
+```{r}
+make_zygosity_plot_con1_trios(df = svs.famdata.con1, GENE = "NBPF17P", min_tick = -12704, max_tick = 12704, min.num.mols = 1, filename.specifics = "trios")
+make_zygosity_plot_con1_trios(df = svs.famdata.con1, GENE = "NBPF17P", min_tick = -12704, max_tick = 12704, min.num.mols = 2, filename.specifics = "trios")
+make_zygosity_plot_con1_trios(df = svs.famdata.con1, GENE = "NBPF17P", min_tick = -12704, max_tick = 12704, min.num.mols = 3, filename.specifics = "trios")
+```
+
+
+## Read in CON1 data, 153 samples
+```{r}
+svs.153.con1 <- prep_sv(sv.call.file = "~/LabProjects/Irys/results/153samples-link2000-minmols2-filtmulti1-20170501/adj-mols-only/sv-calls-CON1-2000.txt",
+                   zygosity.call.file = "~/LabProjects/Irys/results/153samples-link2000-minmols2-filtmulti1-20170501/adj-mols-only/zygosity-calls-CON1-2000.txt")
+
+num.samples.per.gene.con1 <- svs.153.con1 %>% distinct(gene,sample) %>% group_by(gene) %>% summarise(count = n())
+```
+## Plot CON1 results
+### All genes CON1
+```{r}
+
+ggplot(data = filter(svs.153.con1, support == ">1"),
+       mapping = aes(x = reorder(gene,num.con1), y = diff.from.ref, color = factor(num.con1))) +
+  geom_hline(yintercept = seq(-19056,19056,6352), color = "#8e9bb2", size = 1.5) +
+  geom_quasirandom(size = 3,
+                alpha = 0.65,
+                priority = "random",
+                cex = 1) +
+  scale_color_aaas(name = "Number of CON1 Domains in hg38") +
+  labs(x = "gene", y = "size change from reference") +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        legend.text = element_text(size = 22, face = "bold"),
+        legend.title = element_text(size = 22, face = "bold"))  +
+  theme(axis.text.y = element_text(size = 22,
+                                   face = "bold", color = "black")) + 
+  theme(axis.text.x = element_text(size = 22,
+                                   face = "bold", angle=-90, hjust = -0.01, color = "black")) +
+  theme(axis.title.y = element_text(size = 24,
+                                    face = "bold", color = "black")) + 
+  theme(axis.title.x = element_text(size = 24,
+                                    face = "bold", color = "black")) +
+  theme(panel.grid.major.x = element_line(size = 3)) +
+  scale_y_continuous(breaks = seq(-19056,19056,6352), limits = c(-20000,20000))
+
+ggsave(filename = "~/LabProjects/Irys/results/figures/irys-con1-region-all-genes.pdf",
+       width = 11,
+       height = 8.5,
+       units = c("in"))
+```
+
+
+
+### NBPF8
+```{r}
+make_zygosity_plot_con1(df = svs.153.con1, GENE = "NBPF8", min_tick = -12704, max_tick = 12704, min.num.mols = 2)
+```
+
+### NBPF10
+```{r}
+make_zygosity_plot_con1(df = svs.153.con1, GENE = "NBPF10", min_tick = -12704, max_tick = 12704, min.num.mols = 2)
+```
+
+
+### NBPF9
+```{r}
+make_zygosity_plot_con1(df = svs.153.con1, GENE = "NBPF9", min_tick = -12704, max_tick = 12704, min.num.mols = 2)
+```
+### NBPF12
+```{r}
+make_zygosity_plot_con1(df = svs.153.con1, GENE = "NBPF12", min_tick = -12704, max_tick = 12704, min.num.mols = 2)
+```
+
+### NBPF11
+```{r}
+make_zygosity_plot_con1(df = svs.153.con1, GENE = "NBPF11", min_tick = -12704, max_tick = 12704, min.num.mols = 2)
+```
+
+
+### NBPF17P
+```{r}
+make_zygosity_plot_con1(df = svs.153.con1, GENE = "NBPF17P", min_tick = -12704, max_tick = 12704, min.num.mols = 2)
+```
+
+# Questions
+## Question: Which NBPF genes show the greatest, and the least, intragenic structural variation between CON2 and CON3 domains (HLS region) in the extant human population?
+```{r}
+# Read in zygosity call data where every allele has its own line - that is, homozygous calls are duplicated.
+
+svs.153.1line.per.allele <- prep_sv(sv.call.file = "~/LabProjects/Irys/results/129samples-T8A5-link2000-min2mols-filtmulti1-20170314/adj-mols-only/sv-calls-HLS-2000.txt",
+                   zygosity.call.file = "~/LabProjects/Irys/results/129samples-T8A5-link2000-min2mols-filtmulti1-20170314/adj-mols-only/zygosity-calls-HLS-2000-homozygous-lines-duplicated.txt")
+
+
+
+svs.153.sd.data <- svs.153.1line.per.allele %>%
+  filter(support == ">1") %>% 
+  group_by(gene, nonB.hls.status) %>%
+  summarise(sd = round(sd(diff.from.ref),0)) %>%
+  arrange(desc(sd))
+
+svs.153.sd.data <- merge(svs.153.sd.data, num.samples.per.gene.hls, by = "gene")
+
+ggplot(data = svs.153.sd.data,
+       mapping = aes(x =sd, y = reorder(gene,sd))) + 
+  geom_lollipop(mapping = aes(color=nonB.hls.status), point.size=2, horizontal=TRUE) + 
+  scale_color_aaas(name = "G4 motif Sapientin triplet in hg38") +
+  theme(legend.title = element_text(size = 15, face = "bold"), legend.text = element_text(size = 15, face = "bold")) +
+  labs(y = "gene", x = "standard deviation of size changes relative to hg38") +
+  geom_text(mapping = aes(label = sd, hjust = -0.75)) +
+  geom_label(mapping = aes(y = gene, x = -750, label = count), size = 3, hjust = 0.5) +
+  annotate("text", label = "n", y = 12.25, x = -750, size = 3, hjust = 0.5, vjust = -0.5) +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  scale_x_continuous(limits = c(-750,20000)) + 
+  theme(axis.text.x = element_text(size = 14, face = "bold", color = "black")) +
+  theme(axis.text.y = element_text(size = 14, face = "bold", color = "black")) +
+  theme(axis.title.x = element_text(size = 15, face = "bold", color = "black", vjust = -4)) +
+  theme(axis.title.y = element_text(size = 15, face = "bold", color = "black")) + 
+  annotate("segment", x = c(1327,1327,14919), xend = c(1327,14919,14919), y = c(6.8,6.5,6.5), yend = c(6.5,6.5,6.8)) +
+  annotate("text", x = 7500, y = 6, label = "Fold Change: 11", size = 8, vjust = 0.5) + 
+  annotate("segment", x = c(1327,1327,17201), xend = c(1327,17201,17201), y = c(4.8,4.5,4.5), yend = c(4.5,4.5,4.8)) +
+  annotate("text", x = 7500, y = 4, label = "Fold Change: 13", size = 8, vjust = 0.5) + 
+
+ggsave(filename = "~/LabProjects/Irys/results/irys-hls-region-sd-plot.pdf",
+       width = 11,
+       height = 8.5,
+       units = "in")
+```
+
+
+## Question: Which NBPF genes show the greatest, and the least, intragenic structural variation in the CON1 region in the extant human population?
+```{r}
+# Read in zygosity call data where every allele has its own line - that is, homozygous calls are duplicated.
+
+svs.153.con1.1line.per.allele <- prep_sv(sv.call.file = "~/LabProjects/Irys/results/129samples-T8A5-link2000-min2mols-filtmulti1-20170314/adj-mols-only/sv-calls-CON1-2000.txt",
+                   zygosity.call.file = "~/LabProjects/Irys/results/129samples-T8A5-link2000-min2mols-filtmulti1-20170314/adj-mols-only/zygosity-calls-CON1-2000-homozygous-lines-duplicated.txt")
+
+
+
+svs.153.con1.sd.data <- svs.153.con1.1line.per.allele %>%
+  filter(support == ">1") %>% 
+  group_by(gene, num.con1) %>%
+  summarise(sd = round(sd(diff.from.ref),0)) %>%
+  arrange(desc(sd))
+
+svs.153.con1.sd.data <- merge(svs.153.con1.sd.data, num.samples.per.gene.con1, by = "gene")
+
+ggplot(data = svs.153.con1.sd.data,
+       mapping = aes(x =sd, y = reorder(gene,sd))) + 
+  geom_lollipop(mapping = aes(color=factor(num.con1)), point.size=2, horizontal=TRUE) + 
+  scale_color_aaas(name = "number of CON1 domains in hg38") +
+  labs(y = "gene", x = "standard deviation", title = "CON1 region") +
+  geom_text(mapping = aes(label = sd, hjust = -0.25)) +
+  geom_label(mapping = aes(y = gene, x = 0, label = count), size = 3) +
+  annotate("text", label = "number of samples", y = 13.5, x = 0.25, size = 3) +
+  theme_minimal() +
+  theme(legend.position = "bottom") 
+
+ggsave(filename = "~/LabProjects/Irys/results/irys-con1-region-sd-plot.pdf",
+       width = 11,
+       height = 8.5,
+       units = "in")
+```
+
+## Question: How many alleles are there for each gene
+```{r}
+
+ref.features <- read_excel("~/LabProjects/Irys/data/num-features-per-gene-hg38.xlsx")
+ref.features <- ref.features %>% mutate(nonB.hls.status = ifelse(num.nonB.hls > 0, "Y","N"))
+  
+allele.counts.hls <- read_tsv("~/LabProjects/Irys/results/129samples-T8A5-link2000-min2mols-filtmulti1-20170314/adj-mols-only/allele-counts-by-gene-hls.txt", col_names = FALSE)
+colnames(allele.counts.hls) <- c("gene","ref.region.size","num.calls.in.cluster","median.size.in.cluster","min.in.cluster","max.in.cluster","range.of.cluster","size.diffs.from.ref")
+
+allele.counts.hls <- merge(allele.counts.hls, ref.features, by = "gene")
+
+allele.counts.con1 <- read_tsv("~/LabProjects/Irys/results/129samples-T8A5-link2000-min2mols-filtmulti1-20170314/adj-mols-only/allele-counts-by-gene-con1.txt", col_names = FALSE)
+colnames(allele.counts.con1) <- c("gene","ref.region.size","num.calls.in.cluster","median.size.in.cluster","min.in.cluster","max.in.cluster","range.of.cluster","size.diffs.from.ref")
+
+allele.counts.con1 <- merge(allele.counts.con1, ref.features, by = "gene")
+```
+# Number of size alleles by gene for HLS region (at a threshold of 1kb)
+```{r}
+allele.counts.hls.sum <- allele.counts.hls %>% group_by(gene, nonB.hls.status) %>% summarise(count = n()) %>% arrange(desc(count))
+
+
+
+ggplot(data = allele.counts.hls.sum,
+       mapping = aes(x =count, y = reorder(gene,count))) + 
+  geom_lollipop(mapping = aes(color=nonB.hls.status), point.size=2, horizontal=TRUE) + 
+  scale_color_aaas() +
+  labs(y = "gene", x = "number of structural variation alleles identified", title = "HLS region") +
+  geom_text(aes(label = count), hjust = -1) +
+  geom_label(data = num.samples.per.gene.hls, mapping = aes(y = gene, x = 0, label = count)) +
+  annotate("text", label = "number of samples", y = 12.5, x = 1, size = 3) +
+  theme_minimal() +
+  theme(legend.position = "bottom") 
+
+ggsave("~/LabProjects/Irys/results/irys-num-sv-alleles-per-gene-hls.pdf",
+       width = 11,
+       height = 8.5,
+       units = "in")
+```
+# Number of size alleles by gene for CON1 region (at a threshold of 1kb)
+```{r}
+allele.counts.con1.sum <- allele.counts.con1 %>% group_by(gene, num.con1) %>% summarise(count = n()) %>% arrange(desc(count))
+
+
+ggplot(data = allele.counts.con1.sum,
+       mapping = aes(x =count, y = reorder(gene,count))) + 
+  geom_lollipop(mapping = aes(color= factor(num.con1)), point.size=2, horizontal=TRUE) + 
+  scale_color_aaas(name = "Number of CON1 domains in hg38") +
+  labs(y = "gene", x = "number of structural variation alleles identified", title = "CON1 region") +
+  geom_text(aes(label = count), hjust = -1) +
+  geom_label(data = num.samples.per.gene.con1, mapping = aes(y = gene, x = 0, label = count)) +
+  annotate("text", label = "number of samples", y = 13.5, x = 0.25, size = 3) +
+  theme_minimal() +
+  theme(legend.position = "bottom") 
+
+ggsave("~/LabProjects/Irys/results/irys-num-sv-alleles-per-gene-con1.pdf",
+       width = 11,
+       height = 8.5,
+       units = "in")
+```
+
+# Contig to Ref, Mol to Contig for HLS region
+## ContigRef
+### Read in ContigRef data
+```{r}
+
+contig.to.ref <- prep_sv(sv.call.file = "~/LabProjects/Irys/results/ContigRef/153samples-link2000-minmols2-filtmulti1-20170521/adj-mols-only/sv-calls-HLS-2000.txt",
+                   zygosity.call.file = "~/LabProjects/Irys/results/ContigRef/153samples-link2000-minmols2-filtmulti1-20170521/adj-mols-only/zygosity-calls-HLS-2000.txt")
+
+# For now, I am setting the zygosity calls to 1, since the zygosity caller seems to not be working for the ContigRef analysis at the moment, and there should only be one contig per sample for a given gene
+
+contig.to.ref$num.calls <- "1"
+
+# list of genes with ContigRef results
+genes.w.contig.to.ref <- unique(contig.to.ref$gene)
+```
+
+#### Plot ContigRef data
+##### All genes beeswarm
+```{r}
+
+contig.to.ref$nonB.hls.status <- factor(contig.to.ref$nonB.hls.status, levels = c("P","Y","N"))
+
+ggplot(data = contig.to.ref,
+       mapping = aes(x = gene, y = diff.from.ref, color = nonB.hls.status)) +
+  geom_hline(yintercept = seq(-37584,89262,1566), color = "#8e9bb2") +
+  geom_hline(yintercept = seq(-37584,89262,4698), color = "#8e9bb2", size = 1.5) +
+  geom_quasirandom(size = 3,
+                alpha = 0.65,
+                priority = "random",
+                cex = 1) +
+  scale_color_manual(values = g4.y.n, name = "Presence of G4-Sapientin triplet in hg38") +
+  labs(x = "gene", y = "size change from reference") +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        legend.text = element_text(size = 22, face = "bold"),
+        legend.title = element_text(size = 22, face = "bold"))  +
+  theme(axis.text.y = element_text(size = 16,
+                                   face = "bold", color = "black")) + 
+  theme(axis.text.x = element_text(size = 22,
+                                   face = "bold", angle=-90, hjust = -0.01, color = "black")) +
+  theme(axis.title.y = element_text(size = 24,
+                                    face = "bold", color = "black")) + 
+  theme(axis.title.x = element_text(size = 24,
+                                    face = "bold", color = "black")) +
+  theme(panel.grid.major.x = element_line(size = 3)) +
+  scale_y_continuous(breaks = seq(-37584,89262,4698)) +
+  scale_x_discrete(limits = c("NBPF12",
+                                "NBPF14",
+                                "NBPF10",
+                                "NBPF19",
+                                "NBPF1",
+                                "NBPF9",
+                                "NBPF15",
+                                "NBPF11",
+                                "NBPF8",
+                                "NBPF3",
+                                "NBPF25P"))
+```
+
+##### NBPF19
+```{r}
+make_zygosity_plot(df = contig.to.ref,
+                   GENE = "NBPF19",
+                   min_tick = -28188,
+                   max_tick = 28188,
+                   min.num.mols = 1,
+                   filename.specifics = "ContigRef")
+```
+
+
+### MolContig - HLS
+#### Read in MolContig data
+```{r}
+
+mols.to.contigs <- prep_sv(sv.call.file = "~/LabProjects/Irys/results/MolContig/153samples-link2000-minmols2-filtmulti1-20170521/adj-mols-only/sv-calls-HLS-2000.txt",
+                   zygosity.call.file = "~/LabProjects/Irys/results/MolContig/153samples-link2000-minmols2-filtmulti1-20170521/adj-mols-only/zygosity-calls-HLS-2000.txt")
+
+
+# Plot of all genes using mol to contig info
+
+mols.to.contigs$nonB.hls.status <- factor(mols.to.contigs$nonB.hls.status, levels = c("P","Y","N"))
+
+ggplot(data = filter(mols.to.contigs, support == ">1"),
+       mapping = aes(x = reorder(gene,num.nonB.hls), y = diff.from.ref, color = nonB.hls.status)) +
+  geom_hline(yintercept = seq(-37584,89262,1566), color = "#8e9bb2") +
+  geom_hline(yintercept = seq(-37584,89262,4698), color = "#8e9bb2", size = 1.5) +
+  geom_quasirandom(size = 2,
+                alpha = 0.65,
+                priority = "random",
+                cex = 1) +
+  scale_color_manual(values = g4.y.n, name = "Presence of non-B motif containing HLS triplet in hg38") +
+  labs(x = "gene", y = "size change from reference") +
+  theme_minimal() +
+  theme(legend.position = "bottom")  +
+  theme(axis.text.y = element_text(size = 12,
+                                   face = "bold", color = "black")) + 
+  theme(axis.text.x = element_text(size = 12,
+                                   face = "bold", angle=-45, hjust = -0.01, color = "black")) +
+  theme(axis.title.y = element_text(size = 15,
+                                    face = "bold", color = "black")) + 
+  theme(axis.title.x = element_text(size = 15,
+                                    face = "bold", color = "black")) +
+  theme(panel.grid.major.x = element_line(size = 3)) +
+  scale_y_continuous(breaks = seq(-37584,89262,4698), limits = c(-37584,89262)) 
+
+
+# Plot combining size calls from contig with mol to contig based calls
+ggplot(data = filter(mols.to.contigs, support == ">1", gene == "NBPF19"),
+       mapping = aes(x = sample, y = diff.from.ref, color = factor(num.calls))) +
+  geom_hline(yintercept = seq(-23490,32886,1566), color = "#8e9bb2") +
+  geom_hline(yintercept = seq(-23490,32886,4698), color = "#8e9bb2", size = 1.5) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_beeswarm(size = 2,
+                priority = "random",
+                cex = 1) +
+  scale_color_aaas(name = "Number of Calls") +
+  labs(x = "sample", y = "size change from reference", title = "NBPF19") + 
+  theme_minimal() +
+  theme(legend.position = "bottom")  +
+  theme(axis.text.y = element_text(size = 10,
+                                   face = "bold", color = "black")) + 
+  theme(axis.text.x = element_text(size = 6,
+                                   face = "bold", angle=-45, hjust = -0.01, color = "black")) +
+  theme(axis.title.y = element_text(size = 15,
+                                    face = "bold", color = "black")) + 
+  theme(axis.title.x = element_text(size = 15,
+                                    face = "bold", color = "black")) +
+  theme(panel.grid.major.x = element_line(size = 1)) +
+  scale_y_continuous(breaks = seq(-23490,32886,1566)) + 
+  geom_point(data = filter(contig.to.ref, gene == "NBPF19"), aes(x = sample, y = diff.from.ref), color = "black", alpha = 0.5, size = 1)
+```
+##### NBPF19 - MolContig
+```{r}
+# Plot of NBPF19 data using mol to contig info
+make_zygosity_plot(df = mols.to.contigs, GENE = "NBPF19",min_tick = -23490, max_tick = 32886,
+                   min.num.mols = 2,
+                   filename.specifics = "-MolContig")
+```
+
+##### NBPF10 - MolContig
+```{r}
+# Plot of NBPF19 data using mol to contig info
+make_zygosity_plot(df = mols.to.contigs, GENE = "NBPF10",min_tick = -37584, max_tick = 37584,
+                   min.num.mols = 2,
+                   filename.specifics = "-MolContig")
+```
+##### NBPF14 - MolContig Data
+```{r}
+make_zygosity_plot(df = mols.to.contigs, GENE = "NBPF14",min_tick = -23490, max_tick = 32886,
+                   min.num.mols = 2,
+                   filename.specifics = "-MolContig")
+```
+
+##### NBPF9 - MolContig Data
+```{r}
+# Plot of NBPF19 data using mol to contig info
+make_zygosity_plot(df = mols.to.contigs, GENE = "NBPF9",min_tick = -9396, max_tick = 9396, min.num.mols = 2,
+                   filename.specifics = "-MolContig")
+```
+
+
+##### NBPF8 - MolContig Data
+```{r}
+make_zygosity_plot(df = mols.to.contigs, GENE = "NBPF8",min_tick = -9396, max_tick = 9396,
+                   min.num.mols = 2,
+                   filename.specifics = "-MolContig")
+```
+##### NBPF1 - MolContig Data
+```{r}
+make_zygosity_plot(df = mols.to.contigs, GENE = "NBPF1",min_tick = -23490, max_tick = 32886,
+                   min.num.mols = 2,
+                   filename.specifics = "-MolContig")
+```
+
+# Contig to Ref, Mol to Contig for CON1 region
+## ContigRef
+### Read in ContigRef data
+```{r}
+
+contig.to.ref.con1 <- prep_sv(sv.call.file = "~/LabProjects/Irys/results/ContigRef/153samples-link2000-minmols2-filtmulti1-20170521/adj-mols-only/sv-calls-CON1-2000.txt",
+                   zygosity.call.file = "~/LabProjects/Irys/results/ContigRef/153samples-link2000-minmols2-filtmulti1-20170521/adj-mols-only/zygosity-calls-CON1-2000.txt")
+
+# For now, I am setting the zygosity calls to 1, since the zygosity caller seems to not be working for the ContigRef analysis at the moment, and there should only be one contig per sample for a given gene
+
+contig.to.ref.con1$num.calls <- "1"
+
+# list of genes with ContigRef results
+genes.w.contig.to.ref.con1 <- unique(contig.to.ref.con1$gene)
+```
+
+#### Plot ContigRef data-CON1
+##### All genes beeswarm-CON1
+```{r}
+
+contig.to.ref.con1$nonB.hls.status <- factor(contig.to.ref.con1$nonB.hls.status, levels = c("P","Y","N"))
+
+ggplot(data = contig.to.ref.con1,
+        mapping = aes(x = reorder(gene,num.con1), y = diff.from.ref, color = factor(num.con1))) +
+  geom_hline(yintercept = seq(-19056,19056,6352), color = "#8e9bb2", size = 1.5) +
+  geom_quasirandom(size = 3,
+                alpha = 0.65,
+                priority = "random",
+                cex = 1) +
+  scale_color_aaas(name = "Number of CON1 Domains in hg38") +
+  labs(x = "gene", y = "size change from reference") +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        legend.text = element_text(size = 22, face = "bold"),
+        legend.title = element_text(size = 22, face = "bold"))  +
+  theme(axis.text.y = element_text(size = 22,
+                                   face = "bold", color = "black")) + 
+  theme(axis.text.x = element_text(size = 22,
+                                   face = "bold", angle=-90, hjust = -0.01, color = "black")) +
+  theme(axis.title.y = element_text(size = 24,
+                                    face = "bold", color = "black")) + 
+  theme(axis.title.x = element_text(size = 24,
+                                    face = "bold", color = "black")) +
+  theme(panel.grid.major.x = element_line(size = 3)) +
+  scale_y_continuous(breaks = seq(-19056,19056,6352), limits = c(-20000,20000))
+
+ggsave(filename = "~/LabProjects/Irys/results/figures/irys-con1-region-all-genes-ContigRef.pdf",
+       width = 11,
+       height = 8.5,
+       units = c("in"))
+```
+
+
+### MolContig-CON1
+#### Read in MolContig data - CON1
+```{r}
+
+mols.to.contigs.con1 <- prep_sv(sv.call.file = "~/LabProjects/Irys/results/MolContig/153samples-link2000-minmols2-filtmulti1-20170521/adj-mols-only/sv-calls-CON1-2000.txt",
+                   zygosity.call.file = "~/LabProjects/Irys/results/MolContig/153samples-link2000-minmols2-filtmulti1-20170521/adj-mols-only/zygosity-calls-CON1-2000.txt")
+
+
+# Plot of all genes using mol to contig info
+
+mols.to.contigs.con1$nonB.hls.status <- factor(mols.to.contigs.con1$nonB.hls.status, levels = c("P","Y","N"))
+
+ggplot(data = mols.to.contigs.con1,
+        mapping = aes(x = reorder(gene,num.con1), y = diff.from.ref, color = factor(num.con1))) +
+  geom_hline(yintercept = seq(-25408,25408,6352), color = "#8e9bb2", size = 1.5) +
+  geom_quasirandom(size = 3,
+                alpha = 0.65,
+                priority = "random",
+                cex = 1) +
+  scale_color_aaas(name = "Number of CON1 Domains in hg38") +
+  labs(x = "gene", y = "size change from reference") +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        legend.text = element_text(size = 22, face = "bold"),
+        legend.title = element_text(size = 22, face = "bold"))  +
+  theme(axis.text.y = element_text(size = 22,
+                                   face = "bold", color = "black")) + 
+  theme(axis.text.x = element_text(size = 22,
+                                   face = "bold", angle=-90, hjust = -0.01, color = "black")) +
+  theme(axis.title.y = element_text(size = 24,
+                                    face = "bold", color = "black")) + 
+  theme(axis.title.x = element_text(size = 24,
+                                    face = "bold", color = "black")) +
+  theme(panel.grid.major.x = element_line(size = 3)) +
+  scale_y_continuous(breaks = seq(-25408,25408,6352), limits = c(-30000,30000))
+
+ggsave(filename = "~/LabProjects/Irys/results/figures/irys-con1-region-all-genes-MolContig.pdf",
+       width = 11,
+       height = 8.5,
+       units = c("in"))
+```
+
+
+# Sample selection for g4 labeling, and ddPCR experiment based on NBPF1 variation
+```{r}
+selected.samples <- read_excel("~/LabProjects/Irys/sample-info/sample-ids-for-g4-labeling-nbpf1-focused.xlsx")
+head(selected.samples)
+
+sample.selec <- svs.153 %>% mutate(selected = ifelse(sample %in% selected.samples$sample,"Y","N"))
+
+ggplot(data = filter(sample.selec, support == ">1", gene == "NBPF1"),
+       mapping = aes(x = reorder(sample,diff.from.ref,median), y = diff.from.ref, color = selected, size = num.mols.in.cluster)) +
+  geom_beeswarm(alpha = 0.65,
+                priority = "random",
+                cex = 1) +
+  scale_color_aaas(name = "Sample selected") +
+  labs(x = "sample", y = "size change from reference", title = "NBPF1") + 
+  theme_bw() +
+  theme(legend.position = "bottom")  +
+  scale_y_continuous(breaks = seq(0,60000,1566)) +
+  geom_hline(yintercept = seq(1566,60000,1566), color = aaas(4)[1]) +
+  theme(axis.text.y = element_text(size = 6,
+                                   face = "bold", color = "black")) + 
+  theme(axis.text.x = element_text(size = 4.75,
+                                   face = "bold", angle=-55, hjust = -0.01, color = "black")) +
+  theme(axis.title.y = element_text(size = 6,
+                                    face = "bold", color = "black")) + 
+  theme(axis.title.x = element_text(size = 6,
+                                    face = "bold", color = "black")) +
+  theme(panel.grid.major.x = element_line(size = 2.5))
+
+ggsave("~/LabProjects/Irys/results/sample-selection-based-on-nbpf1-variation.pdf",
+       width = 11,
+       height = 8.5,
+       units = c("in"))
+```
+
+
+
+
+# Try with different parameters
+
+## Only show SVs supported by more than one molecule
+
+```{r}
+link1000.conf1.multimols <- ggplot(data = filter(svs, num_molecules == ">1"), mapping = aes(y=gene, x = size2, color = type)) +
+  geom_point(data = filter(num_type_per_gene, type == "nd",nick_type == "std"), mapping = aes(x = x_pos, y = gene, size = samples_without_data), color = "burlywood4") + 
+  geom_quasirandom(data = filter(svs, type_group == "ref",nick_type == "std"),size = 2, color = "gray27", alpha = 0.65, varwidth = TRUE) +
+  geom_quasirandom(data = filter(svs, type_group == "sv",nick_type == "std", num_molecules == ">1"),mapping = aes(shape = num_molecules), size = 2,alpha = 0.65,varwidth = TRUE) +
+  scale_color_aaas() +
+  labs(x = "size change relative to reference") + 
+  geom_vline(xintercept = 95000, color = "gray27") +
+  geom_hline(yintercept = 6.6) + 
+  scale_x_continuous(breaks = seq(-75000,95000,10000)) +
+  theme(axis.text.y = element_text(size = 13,
+                                   face = "bold")) + 
+  theme(axis.text.x = element_text(size = 10,
+                                   face = "bold")) +
+  theme(axis.title.y = element_text(size = 13,
+                                    face = "bold")) + 
+  theme(axis.title.x = element_text(size = 13,
+                                    face = "bold")) +
+  scale_y_discrete(limits = c("NBPF20",
+                              "NBPF19",
+                              "NBPF10",
+                              "NBPF14",
+                              "NBPF12",
+                              "NBPF26",
+                              "NBPF9",
+                              "NBPF11",
+                              "NBPF1",
+                              "NBPF25P",
+                              "NBPF15",
+                              "NBPF8",
+                              "NBPF3",
+                              "NBPF17P"))
+
+link1000.conf1.multimols
+
+ggsave("~/LabProjects/Irys/results/link1000-conf1-multimols.pdf",
+       plot = link1000.conf1.multimols,
+       width = 11,
+       height = 8.5,
+       units = c("in"))
+```
+
+## Use link distance of 2000 instead of 1000
+```{r}
+svs <- read.delim("~/LabProjects/Irys/results/sv-calls-HLS-2000-filt-20170210.txt", header = FALSE)
+svs <- as_tibble(svs)
+colnames(svs) <- c("gene","sample","type","size","support","min","max","range","nick_type","median.conf")
+
+# Make some modifications to the file
+svs <- svs %>% mutate(size2 = ifelse(type == "del", size*-1,size),
+                      type_group = ifelse(type == "nd", "nd",
+                                          ifelse(type == "ref", "ref","sv")),
+                      num_molecules = ifelse(support == 1,"1",">1"))
+
+num_type_per_gene <- svs %>% group_by(gene,type,nick_type) %>% summarise(count = n()) %>%
+  mutate(x_pos = 100000)
+colnames(num_type_per_gene) <- c("gene","type","nick_type","samples_without_data","x_pos")
+
+# Plot data
+link2000.conf1 <- ggplot(data = svs, mapping = aes(y=gene, x = size2, color = type)) +
+  geom_point(data = filter(num_type_per_gene, type == "nd",nick_type == "std"), mapping = aes(x = x_pos, y = gene, size = samples_without_data), color = "burlywood4") + 
+  geom_quasirandom(data = filter(svs, type_group == "ref",nick_type == "std"),size = 2, color = "gray27", alpha = 0.65, varwidth = TRUE) +
+  geom_quasirandom(data = filter(svs, type_group == "sv",nick_type == "std"),mapping = aes(shape = num_molecules), size = 2,alpha = 0.65,varwidth = TRUE) +
+  scale_color_aaas() +
+  labs(x = "size change relative to reference") + 
+  geom_vline(xintercept = 95000, color = "gray27") +
+  geom_hline(yintercept = 6.6) + 
+  scale_x_continuous(breaks = seq(-75000,95000,10000)) +
+  theme(axis.text.y = element_text(size = 13,
+                                   face = "bold")) + 
+  theme(axis.text.x = element_text(size = 10,
+                                   face = "bold")) +
+  theme(axis.title.y = element_text(size = 13,
+                                    face = "bold")) + 
+  theme(axis.title.x = element_text(size = 13,
+                                    face = "bold")) +
+  scale_y_discrete(limits = c("NBPF20",
+                              "NBPF19",
+                              "NBPF10",
+                              "NBPF14",
+                              "NBPF12",
+                              "NBPF26",
+                              "NBPF9",
+                              "NBPF11",
+                              "NBPF1",
+                              "NBPF25P",
+                              "NBPF15",
+                              "NBPF8",
+                              "NBPF3",
+                              "NBPF17P"))
+
+
+link2000.conf1
+
+ggsave("~/LabProjects/Irys/results/link2000-conf1.pdf",
+       plot = link2000.conf1,
+       width = 11,
+       height = 8.5,
+       units = c("in"))
+```
+
+## Link distance 2000, only SVs with more than one mol
+```{r}
+link2000.conf1.multimols <- ggplot(data = filter(svs, num_molecules == ">1"), mapping = aes(y=gene, x = size2, color = type)) +
+  geom_point(data = filter(num_type_per_gene, type == "nd",nick_type == "std"), mapping = aes(x = x_pos, y = gene, size = samples_without_data), color = "burlywood4") + 
+  geom_quasirandom(data = filter(svs, type_group == "ref",nick_type == "std"),size = 2, color = "gray27", alpha = 0.65, varwidth = TRUE) +
+  geom_quasirandom(data = filter(svs, type_group == "sv",nick_type == "std", num_molecules == ">1"),mapping = aes(shape = num_molecules), size = 2,alpha = 0.65,varwidth = TRUE) +
+  scale_color_aaas() +
+  labs(x = "size change relative to reference") + 
+  geom_vline(xintercept = 95000, color = "gray27") +
+  geom_hline(yintercept = 6.6) + 
+  scale_x_continuous(breaks = seq(-75000,95000,10000)) +
+  theme(axis.text.y = element_text(size = 13,
+                                   face = "bold")) + 
+  theme(axis.text.x = element_text(size = 10,
+                                   face = "bold")) +
+  theme(axis.title.y = element_text(size = 13,
+                                    face = "bold")) + 
+  theme(axis.title.x = element_text(size = 13,
+                                    face = "bold")) +
+  scale_y_discrete(limits = c("NBPF20",
+                              "NBPF19",
+                              "NBPF10",
+                              "NBPF14",
+                              "NBPF12",
+                              "NBPF26",
+                              "NBPF9",
+                              "NBPF11",
+                              "NBPF1",
+                              "NBPF25P",
+                              "NBPF15",
+                              "NBPF8",
+                              "NBPF3",
+                              "NBPF17P"))
+
+link2000.conf1.multimols
+
+ggsave("~/LabProjects/Irys/results/link2000-conf1-multimols.pdf",
+       plot = link2000.conf1.multimols,
+       width = 11,
+       height = 8.5,
+       units = c("in"))
+```
+
+# Old code
+```{r}
+# old zygosity plot code
+```
+
+
