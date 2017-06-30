@@ -6,8 +6,6 @@
 
 source scripts/config.sh
 
-# Provide the directory that contains the directory for each sample
-sample_dir=data/1704_trios_mols_to_contigs_to_ref/mols_to_contigs_to_ref_trios/
 # Provide the "generic" file prefix
 generic_prefix=local_contigs_to_ref
 

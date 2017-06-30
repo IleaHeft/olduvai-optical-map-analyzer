@@ -6,25 +6,37 @@ date=$(date +"%Y%m%d")
 # the data folder (that can contain different sub-folders of different sample groups)
 data_dir=/vol7/home/eskildseni/LabProjects/irys-duf1220/data
 # the specific folder that holds all of the samples you want to analyze
-sample_dir=$data_dir/1704_alignments_multimatch_154complete
+sample_dir=$data_dir/g4-labeled
 
 
 # specify the alignment type (MolRef, MolContig, ContigRef)
 alignment_type=MolRef
 
 # number of samples
-num_samples=153
+num_samples=HG02490-G4
 
 # The minimum difference that you want between the maximum confidence score for a molecule and the next highest confidence score - molecules with confidence scores closer than this threshold will be filtered out
 conf_spread=1
 
 # The number of base pairs within which to string multiple molecules together in the peak caller step
-link_dist=2000
+link_dist=1000
+
+# the file name format for the reference cmap files: everything that follows the sample name
+#file_exten_generic=duf1220_mols_v_chr1
+#file_exten_rcmap=duf1220_mols_v_chr1_r.cmap
+#file_exten_qcmap=duf1220_mols_v_chr1_q.cmap
+#file_exten_xmap=duf1220_mols_v_chr1.xmap
+
+file_exten_generic=DufG4_duf1220_new_mols_v_chr1grna_M1
+file_exten_rcmap=DufG4_duf1220_new_mols_v_chr1grna_M1_r.cmap
+file_exten_qcmap=DufG4_duf1220_new_mols_v_chr1grna_M1_q.cmap
+file_exten_xmap=DufG4_duf1220_new_mols_v_chr1grna_M1.xmap
+
 
 # When generating zygosity calls, specify the minimum number of molecules in each cluster that you want to "count" the SV call for 
 ## For example, if you only want to consider SV calls supported by 2 or more molecules, set the value to 2 - if you're fine with SV calls only having the support of a single molecule
 ## then a setting of 1 is fine.  Could also set it higher if you wanted greater levels of support
-min_mols_in_cluster=2
+min_mols_in_cluster=1
 
 results_folder=$alignment_type/$num_samples"samples-link"$link_dist"-minmols"$min_mols_in_cluster"-filtmulti"$conf_spread"-"$date
 
@@ -35,16 +47,16 @@ duf_annotation=~/LabProjects/Irys/annotation-clade-based-numbering-full-domains-
 script_dir=~/LabProjects/irys-duf1220/scripts
 
 
-# the file name format for the reference cmap files: everything that follows the sample name
-file_exten_generic=duf1220_mols_v_chr1_cmap
-file_exten_rcmap=duf1220_mols_v_chr1_cmap_r.cmap
-file_exten_qcmap=duf1220_mols_v_chr1_cmap_q.cmap
-file_exten_xmap=duf1220_mols_v_chr1_cmap.xmap
-
 
 # you can modify this to change the CON3 nick to a nick to the right of CON3 by however many nicks you specify - might be useful for seeing if different nicks recover more molecules
 shift_nicks=0
 
+# generate directory for the filtered xmaps to go in
+filt_xmap_dir=$sample_dir/"xmap-filt"$conf_spread
+
+if [ ! -d "$filt_xmap_dir" ]; then
+    mkdir -p $filt_xmap_dir
+fi
 
 # the path to the desired output folder
 output_dir=/vol7/home/eskildseni/LabProjects/irys-duf1220/results/$results_folder

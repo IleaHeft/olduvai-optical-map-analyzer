@@ -40,16 +40,23 @@ if [ $alignment_type == "MolRef" ]; then
             
             # Generate filterted xmap file that removes molecules with secondary mappings of similiar confidence to max confidence and reports only highest confidence alignment for other molecules
             echo "generating a xmap file with multi-match molecules removed for" $sample
+            # path/name of original xmap file
             xmap=$sample_dir/$sample"_"$file_exten_xmap
+            
+            #path/name of filtered xmap file
+            filt_xmap=$filt_xmap_dir/$sample"-filt"$conf_spread".xmap"
+
             echo "xmap file being used is:" $xmap
-            python $script_dir/generate-filtered-xmap.py $sample_dir $sample $xmap $conf_spread
+            echo "filtered xmap is:" $filt_xmap
+
+            python $script_dir/generate-filtered-xmap.py $sample_dir $sample $xmap $conf_spread $filt_xmap_dir $filt_xmap
             
             
             echo "calculating the distance between CON2 and CON3 nicks for" $sample
-            python $script_dir/nick-distance-calc.py $align_mol_dir $shift_nicks HLS $duf_nicks $output_dir $sample $file_exten_generic >> $hls_output
+            python $script_dir/nick-distance-calc.py $align_mol_dir $shift_nicks HLS $duf_nicks $output_dir $sample $file_exten_generic $filt_xmap >> $hls_output
             
             echo "calculating the distance between the CON1 nick and the next closest nick upstream for" $sample
-            python $script_dir/nick-distance-calc.py $align_mol_dir $shift_nicks CON1 $duf_nicks $output_dir $sample $file_exten_generic >> $con1_output
+            python $script_dir/nick-distance-calc.py $align_mol_dir $shift_nicks CON1 $duf_nicks $output_dir $sample $file_exten_generic $filt_xmap >> $con1_output
         done
 
 else
@@ -102,10 +109,10 @@ python $script_dir/sv-caller.py $ref_dist_con1 $peak_calls_con1 CON1 $link_dist 
 
 ### make version of the sv all output where homozygous calls are duplicated so that each "allele" is represented by a line
 echo "making sv call file with duplicated homozyougs calls for HLS region"
-python $script_dir/duplicate-sv-call-if-homozygous.py  $output_dir/sv-calls-HLS-2000.txt > $output_dir/sv-calls-HLS-2000-1lineperallele.txt
+python $script_dir/duplicate-sv-call-if-homozygous.py  $output_dir/sv-calls-HLS-$link_dist.txt > $output_dir/sv-calls-HLS-$link_dist-1lineperallele.txt
 
 echo "making sv call file with duplicated homozyougs calls for CON1 region"
-python $script_dir/duplicate-sv-call-if-homozygous.py  $output_dir/sv-calls-CON1-2000.txt > $output_dir/sv-calls-CON1-2000-1lineperallele.txt
+python $script_dir/duplicate-sv-call-if-homozygous.py  $output_dir/sv-calls-CON1-$link_dist.txt > $output_dir/sv-calls-CON1-$link_dist-1lineperallele.txt
 
 # run the zygosity caller
 
@@ -157,10 +164,10 @@ python $script_dir/sv-caller.py $ref_dist_con1 $peak_calls_con1_adjonly CON1 $li
 
 ### make version of the sv all output where homozygous calls are duplicated so that each "allele" is represented by a line
 echo "making sv call file with duplicated homozyougs calls for HLS region"
-python $script_dir/duplicate-sv-call-if-homozygous.py  $output_dir_adjonly/sv-calls-HLS-2000.txt > $output_dir_adjonly/sv-calls-HLS-2000-1lineperallele.txt
+python $script_dir/duplicate-sv-call-if-homozygous.py  $output_dir_adjonly/sv-calls-HLS-$link_dist.txt > $output_dir_adjonly/sv-calls-HLS-$link_dist-1lineperallele.txt
 
 echo "making sv call file with duplicated homozyougs calls for CON1 region"
-python $script_dir/duplicate-sv-call-if-homozygous.py  $output_dir_adjonly/sv-calls-CON1-2000.txt > $output_dir_adjonly/sv-calls-CON1-2000-1lineperallele.txt
+python $script_dir/duplicate-sv-call-if-homozygous.py  $output_dir_adjonly/sv-calls-CON1-$link_dist.txt > $output_dir_adjonly/sv-calls-CON1-$link_dist-1lineperallele.txt
 
 
 # run the zygosity caller

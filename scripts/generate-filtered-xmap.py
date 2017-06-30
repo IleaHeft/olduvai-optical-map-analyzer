@@ -15,8 +15,11 @@ to_filter_out = []
 to_keep = defaultdict(float)
 
 # Set up output files
-filtered_out = open(sample_dir + "/" + sample + "-mols-with-ambiguous-alignment.txt",mode = 'w')
-filtered_xmap = open(sample_dir + "/" + sample + "-filt.xmap",mode = 'w')
+
+#filtered_xmap = open(sample_dir + "/conf" + conf_spread + "/" + sample + "-filt" + conf_spread + ".xmap",mode = 'w')
+filt_dir = sys.argv[5]
+filtered_out = open(filt_dir + "/" + sample + "-mols-with-ambiguous-alignment.txt",mode = 'w')
+filtered_xmap = open(sys.argv[6], mode = 'w')
 
 
 for line in open(xmap):

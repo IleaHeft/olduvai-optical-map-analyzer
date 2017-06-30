@@ -25,7 +25,8 @@ file_exten_generic = sys.argv[7]
 # Using generic file extension, generate paths to each of these files
 
 #xmap=directory + "/" + sample + "-" + file_exten_generic + ".xmap"
-xmap=directory + "/" + sample + "-filt.xmap"
+#xmap=directory + "/" + sample + "-filt.xmap"
+xmap = sys.argv[8]
 
 if "-" in file_exten_generic:
     r_cmap=directory + "/" + sample + "-" + file_exten_generic + "-r.cmap" 
