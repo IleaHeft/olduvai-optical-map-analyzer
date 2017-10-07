@@ -1,6 +1,6 @@
-# irys-duf1220
+# Olduvai optical map analyzer
 
-irys-duf1220 is a set of tools for utilizing data produced by the Irys system to analyze structural variation in DUF1220 containing genes
+The Olduvai optical map analyzer is a set of tools for utilizing data produced by Bionano optical mapping to analyze structural variation in Olduvai containing genes
 
 # Getting Started
 You will want to run 2 types of analysis.  
